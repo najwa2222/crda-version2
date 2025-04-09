@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-deployment
+  namespace: crda-namespace
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: crda-app
+  template:
+    metadata:
+      labels:
+        app: crda-app
+    spec:
+      containers:
+      - name: crda-app
+        image: najwa22/crda-app:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 4200
+        env:
+        - name: PORT
+          value: "4200"
+        - name: MYSQL_HOST
+          value: "mysql-service"
+        - name: MYSQL_PORT
+          value: "3306"
+        - name: MYSQL_DATABASE
+          value: "base_crda"  # Changed to match your schema
+        - name: MYSQL_USER
+          value: "crda_user"  # Changed to match user created in init script
+        - name: MYSQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: app-password
+        - name: SESSION_SECRET
+          value: "secure-session-key-for-production"
+        - name: NODE_ENV
+          value: "production"
+        resources:
+          limits:
+            cpu: "0.5"
+            memory: "512Mi"
+          requests:
+            cpu: "0.2"
+            memory: "256Mi"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 4200
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 4200
+          initialDelaySeconds: 5
+          periodSeconds: 2
