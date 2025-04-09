@@ -69,14 +69,16 @@ app.use(helmet({
     useDefaults: true,
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "https://cdnjs.cloudflare.com", "'unsafe-inline'"],  // allow anime.js + inline scripts
-      styleSrc: ["'self'", "https://cdnjs.cloudflare.com", "'unsafe-inline'"],
+      scriptSrc: ["'self'", "https://cdnjs.cloudflare.com", "'unsafe-inline'"],
+      styleSrc: ["'self'", "https://cdnjs.cloudflare.com", "https://fonts.googleapis.com", "'unsafe-inline'"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:"],
       connectSrc: ["'self'"],
       objectSrc: ["'none'"],
     },
   },
 }));
+
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -103,6 +105,14 @@ app.use((req, res, next) => {
   res.locals.user = req.session.user || null;
   next();
 });
+
+app.use((req, res, next) => {
+  if (!connection) {
+    return res.status(503).send('Database not ready');
+  }
+  next();
+});
+
 
 // --- View Engine Setup (Handlebars) ---
 app.engine('.hbs', engine({
@@ -142,14 +152,18 @@ const isDirecteur = createRoleCheck('directeur');
 
 // Health check: used by container orchestration to ensure the app is running.
 app.get('/health', async (req, res) => {
+  if (!connection) {
+    return res.status(503).send('DB not connected yet');
+  }
   try {
     await connection.query('SELECT 1');
     res.status(200).send('OK');
   } catch (err) {
     console.error('Health check failed:', err.message);
-    res.status(500).send('DB connection failed');
+    res.status(500).send('DB query failed');
   }
 });
+
 
 // Home and About pages
 app.get('/', (req, res) => res.render('index', { title: 'Home', layout: 'main' }));
@@ -165,18 +179,42 @@ app.get('/login', (req, res) => {
 // Handle login. In production, use bcrypt to compare passwords.
 app.post('/login', async (req, res) => {
   const { email_user, password_user } = req.body;
+
+  console.log('➡️ Login attempt:', { email_user, password_user });
+
   try {
     const [users] = await connection.query('SELECT * FROM utilisateur WHERE email_user = ?', [email_user]);
-    if (!users.length) return res.redirect('/login?error=invalid_credentials');
+
+    if (!users.length) {
+      console.log('❌ No user found with email:', email_user);
+      return res.redirect('/login?error=invalid_credentials');
+    }
+
     const user = users[0];
+    console.log('✅ User record found:', user);
+
+    let match = false;
 
     if (IS_PROD) {
-      const match = await bcrypt.compare(password_user, user.password_user);
-      if (!match) return res.redirect('/login?error=invalid_credentials');
+      console.log('🔐 Production mode: comparing hash...');
+      match = await bcrypt.compare(password_user, user.password_user);
     } else {
-      if (password_user !== user.password_user) return res.redirect('/login?error=invalid_credentials');
+      console.log('🧪 Dev mode: comparing plain passwords...');
+      match = password_user === user.password_user;
     }
-    if (user.status_user !== 'approved') return res.redirect('/unapproved_login');
+
+    console.log('🔍 Password match result:', match);
+
+    if (!match) {
+      console.log('❌ Passwords do not match');
+      return res.redirect('/login?error=invalid_credentials');
+    }
+
+    if (user.status_user !== 'approved') {
+      console.log('⛔ User not approved:', user.status_user);
+      return res.redirect('/unapproved_login');
+    }
+
     req.session.user = {
       id: user.id,
       email_user: user.email_user,
@@ -184,13 +222,23 @@ app.post('/login', async (req, res) => {
       nom_user: user.nom_user,
       prenom_user: user.prenom_user,
     };
-    const routes = { chef_dentreprise: '/getservices', gerant: '/getreports', directeur: '/results' };
+
+    console.log('✅ Login success — redirecting user with role:', user.role_user);
+
+    const routes = {
+      chef_dentreprise: '/getservices',
+      gerant: '/getreports',
+      directeur: '/results',
+    };
+
     res.redirect(routes[user.role_user] || '/login?error=invalid_role');
+
   } catch (err) {
-    console.error('Login error:', err.message);
+    console.error('🚨 Login error:', err.message);
     res.redirect('/login?error=server_error');
   }
 });
+
 
 // Logout route.
 app.get('/logout', (req, res) => {
@@ -216,7 +264,7 @@ app.post('/register', async (req, res) => {
   try {
     const [existing] = await connection.query('SELECT * FROM utilisateur WHERE email_user = ? OR cin_user = ?', [email_user, cin_user]);
     if (existing.length) return res.redirect('/register?error=exists');
-    const finalPassword = IS_PROD ? await bcrypt.hash(password_user, 10) : password_user;
+    const finalPassword = await bcrypt.hash(password_user, 10);
     await connection.query(
       `INSERT INTO utilisateur 
          (email_user, password_user, role_user, status_user, nom_user, prenom_user, sex_user, cin_user)
