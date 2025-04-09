@@ -99,7 +99,7 @@ app.use(session({
   saveUninitialized: true,
   store: sessionStore,
   cookie: {
-    secure: false,
+    secure: IS_PROD,
     httpOnly: true,
     sameSite: 'lax',
     maxAge: 24 * 60 * 60 * 1000 
@@ -145,20 +145,6 @@ const isAuthenticated = (req, res, next) => {
   console.log('❌ Auth failed - No user in session');
   res.redirect('/login?error=not_logged_in');
 };
-
-// Add this route right after your session middleware setup
-app.get('/debug-session', (req, res) => {
-  console.log('Debug route - Session ID:', req.sessionID);
-  console.log('Debug route - Session data:', req.session);
-  
-  if (!req.session.debugCounter) {
-    req.session.debugCounter = 1;
-  } else {
-    req.session.debugCounter++;
-  }
-  
-  res.send(`Session check: counter = ${req.session.debugCounter}, user = ${JSON.stringify(req.session.user || 'not logged in')}`);
-});
 
 const createRoleCheck = (...allowedRoles) => (req, res, next) => {
   if (!req.session.user || !allowedRoles.includes(req.session.user.role_user)) {
