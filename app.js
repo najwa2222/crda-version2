@@ -100,7 +100,7 @@ app.use(session({
   cookie: {
     secure: IS_PROD,
     httpOnly: true,
-    sameSite: 'lax',
+    sameSite: 'strict',
   }
 }));
 
