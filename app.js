@@ -1,5 +1,3 @@
-// app.js – Unified application code
-// Ensure your package.json includes "type": "module" if you use ES modules.
 import express from 'express';
 import { engine } from 'express-handlebars';
 import mysql from 'mysql2/promise';
@@ -9,7 +7,9 @@ import bcrypt from 'bcrypt';
 import helmet from 'helmet';
 import methodOverride from 'method-override';
 import dotenv from 'dotenv';
-import MySQLStore from 'express-mysql-session';
+
+// First import MySQLStore as a function
+import MySQLStoreFactory from 'express-mysql-session';
 
 dotenv.config();
 
@@ -21,7 +21,6 @@ const NODE_ENV = process.env.NODE_ENV || 'development';
 const IS_PROD = NODE_ENV === 'production';
 
 // Database configuration – these values come from the environment.
-// Use a local .env file for development; production should inject these variables.
 const DB_CONFIG = {
   host: process.env.MYSQL_HOST || 'localhost',
   user: process.env.MYSQL_USER || 'root',
@@ -29,7 +28,9 @@ const DB_CONFIG = {
   database: process.env.MYSQL_DATABASE || 'base_crda',
   port: process.env.MYSQL_PORT ? Number(process.env.MYSQL_PORT) : 3306,
 };
-// Create the session store AFTER DB_CONFIG is defined
+
+// Initialize the MySQLStore with the session
+const MySQLStore = MySQLStoreFactory(session);
 const sessionStore = new MySQLStore(DB_CONFIG);
 
 const SESSION_SECRET = process.env.SESSION_SECRET || 'default-insecure-secret';
