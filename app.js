@@ -228,15 +228,23 @@ app.post('/login', async (req, res) => {
       prenom_user: user.prenom_user,
     };
 
-    console.log('✅ Login success — redirecting user with role:', user.role_user);
-
-    const routes = {
-      chef_dentreprise: '/getservices',
-      gerant: '/getreports',
-      directeur: '/results',
-    };
-
-    res.redirect(routes[user.role_user] || '/login?error=invalid_role');
+    // Save the session before redirecting
+    req.session.save(err => {
+      if (err) {
+        console.error('❌ Session save error:', err);
+        return res.redirect('/login?error=session_error');
+      }
+      
+      console.log('✅ Login success — redirecting user with role:', user.role_user);
+      
+      const routes = {
+        chef_dentreprise: '/getservices',
+        gerant: '/getreports',
+        directeur: '/results',
+      };
+      
+      res.redirect(routes[user.role_user] || '/login?error=invalid_role');
+    });
 
   } catch (err) {
     console.error('🚨 Login error:', err.message);
