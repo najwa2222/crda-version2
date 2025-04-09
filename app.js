@@ -9,6 +9,8 @@ import bcrypt from 'bcrypt';
 import helmet from 'helmet';
 import methodOverride from 'method-override';
 import dotenv from 'dotenv';
+import MySQLStore from 'express-mysql-session';
+const sessionStore = new MySQLStore(DB_CONFIG);
 
 dotenv.config();
 
@@ -93,11 +95,12 @@ app.use(session({
   secret: SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
+  store: sessionStore,
   cookie: {
-    secure: IS_PROD, // In production, cookies are marked secure (requires HTTPS)
+    secure: IS_PROD,
     httpOnly: true,
     sameSite: 'strict',
-  },
+  }
 }));
 
 // Make session user available in all views.
