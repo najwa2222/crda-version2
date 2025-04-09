@@ -138,7 +138,10 @@ app.set('views', './views');
 
 // --- Authentication and Role-Based Middleware ---
 const isAuthenticated = (req, res, next) => {
+  console.log('🔐 Auth check - Session ID:', req.sessionID);
+  console.log('🔐 Auth check - User in session:', req.session.user);
   if (req.session.user) return next();
+  console.log('❌ Auth failed - No user in session');
   res.redirect('/login?error=not_logged_in');
 };
 
