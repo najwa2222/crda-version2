@@ -10,7 +10,6 @@ import helmet from 'helmet';
 import methodOverride from 'method-override';
 import dotenv from 'dotenv';
 import MySQLStore from 'express-mysql-session';
-const sessionStore = new MySQLStore(DB_CONFIG);
 
 dotenv.config();
 
@@ -30,6 +29,8 @@ const DB_CONFIG = {
   database: process.env.MYSQL_DATABASE || 'base_crda',
   port: process.env.MYSQL_PORT ? Number(process.env.MYSQL_PORT) : 3306,
 };
+// Create the session store AFTER DB_CONFIG is defined
+const sessionStore = new MySQLStore(DB_CONFIG);
 
 const SESSION_SECRET = process.env.SESSION_SECRET || 'default-insecure-secret';
 
@@ -99,7 +100,7 @@ app.use(session({
   cookie: {
     secure: IS_PROD,
     httpOnly: true,
-    sameSite: 'strict',
+    sameSite: 'lax',
   }
 }));
 
