@@ -5,7 +5,7 @@
   "main": "app.js",
   "scripts": {
     "start": "nodemon app.js",
-    "dev": "tailwindcss -i ./public/css/tailwind.css -o ./public/css/styles.css --watch --config tailwind.config.cjs",
+    "dev": "tailwindcss -i ./public/css/tailwind.css -o ./public/css/styles.css --config tailwind.config.cjs",
     "build": "tailwindcss -i ./public/css/tailwind.css -o ./public/css/styles.css --minify --config tailwind.config.cjs",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",

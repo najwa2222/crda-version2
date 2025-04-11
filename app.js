@@ -192,67 +192,67 @@ app.post('/login', async (req, res) => {
   console.log('➡️ Login attempt:', { email_user, password_user });
 
   try {
-    const [users] = await connection.query('SELECT * FROM utilisateur WHERE email_user = ?', [email_user]);
+      const [users] = await connection.query('SELECT * FROM utilisateur WHERE email_user = ?', [email_user]);
 
-    if (!users.length) {
-      console.log('❌ No user found with email:', email_user);
-      return res.redirect('/login?error=invalid_credentials');
-    }
-
-    const user = users[0];
-    console.log('✅ User record found:', user);
-
-    let match = false;
-
-    if (IS_PROD) {
-      console.log('🔐 Production mode: comparing hash...');
-      match = await bcrypt.compare(password_user, user.password_user);
-    } else {
-      console.log('🧪 Dev mode: comparing plain passwords...');
-      match = password_user === user.password_user;
-    }
-
-    console.log('🔍 Password match result:', match);
-
-    if (!match) {
-      console.log('❌ Passwords do not match');
-      return res.redirect('/login?error=invalid_credentials');
-    }
-
-    if (user.status_user !== 'approved') {
-      console.log('⛔ User not approved:', user.status_user);
-      return res.redirect('/unapproved_login');
-    }
-
-    req.session.user = {
-      id: user.id,
-      email_user: user.email_user,
-      role_user: user.role_user,
-      nom_user: user.nom_user,
-      prenom_user: user.prenom_user,
-    };
-
-    // Save the session before redirecting
-    req.session.save(err => {
-      if (err) {
-        console.error('❌ Session save error:', err);
-        return res.redirect('/login?error=session_error');
+      if (!users.length) {
+          console.log('❌ No user found with email:', email_user);
+          return res.redirect('/login?error=invalid_credentials');
       }
-      
-      console.log('✅ Login success — redirecting user with role:', user.role_user);
-      
-      const routes = {
-        chef_dentreprise: '/getservices',
-        gerant: '/getreports',
-        directeur: '/results',
+
+      const user = users[0];
+      console.log('✅ User record found:', user);
+
+      let match = false;
+
+      if (IS_PROD) {
+          console.log('🔐 Production mode: comparing hash...');
+          match = await bcrypt.compare(password_user, user.password_user);
+      } else {
+          console.log('🧪 Dev mode: comparing plain passwords...');
+          match = await bcrypt.compare(password_user, user.password_user);
+      }
+
+      console.log('🔍 Password match result:', match);
+
+      if (!match) {
+          console.log('❌ Passwords do not match');
+          return res.redirect('/login?error=invalid_credentials');
+      }
+
+      if (user.status_user !== 'approved') {
+          console.log('⛔ User not approved:', user.status_user);
+          return res.redirect('/unapproved_login');
+      }
+
+      req.session.user = {
+          id: user.id,
+          email_user: user.email_user,
+          role_user: user.role_user,
+          nom_user: user.nom_user,
+          prenom_user: user.prenom_user,
       };
-      
-      res.redirect(routes[user.role_user] || '/login?error=invalid_role');
-    });
+
+      // Save the session before redirecting
+      req.session.save(err => {
+          if (err) {
+              console.error('❌ Session save error:', err);
+              return res.redirect('/login?error=session_error');
+          }
+          
+          console.log('✅ Login success — redirecting user with role:', user.role_user);
+          
+          const routes = {
+              chef_dentreprise: '/getservices',
+              gerant: '/getreports',
+              directeur: '/results',
+          };
+          
+          res.redirect(routes[user.role_user] || '/login?error=invalid_role');
+      });
 
   } catch (err) {
-    console.error('🚨 Login error:', err.message);
-    res.redirect('/login?error=server_error');
+      console.error('🚨 Login error:', err.message);
+      res.redirect('/login?error=server_error');
   }
 });
 
@@ -432,13 +432,35 @@ app.get('/viewreport', isAuthenticated, (req, res) => {
 // List reports.
 app.get('/getreports', isAuthenticated, isGerant, async (req, res) => {
   try {
-    const [reports] = await connection.query('SELECT * FROM rapport ORDER BY id DESC');
-    res.render('getreports', { title: 'قائمة التقارير', reports, user: req.session.user });
+    const [results] = await connection.query(`
+      SELECT 
+        s.id AS service_id,
+        s.sujet,
+        s.prenom,
+        s.nom,
+        s.cin,
+        s.numero_transaction,
+        r.surface,
+        r.limites_terrain,
+        r.localisation,
+        r.superficie_batiments_anciens,
+        r.id AS report_id
+      FROM services_utilisateur s
+      LEFT JOIN rapport r ON s.cin = r.cin AND s.sujet = r.sujet
+      ORDER BY s.id DESC
+    `);
+
+    res.render('getreports', {
+      title: 'قائمة التقارير',
+      services: results,
+      user: req.session.user
+    });
   } catch (err) {
-    console.error('Get reports error:', err.message);
+    console.error('Error loading reports:', err.message);
     res.redirect('/getreports?error=database_error');
   }
 });
+
 
 // Render form to edit a report.
 app.get('/editreport/:id', isAuthenticated, isGerant, async (req, res) => {
@@ -454,25 +476,54 @@ app.get('/editreport/:id', isAuthenticated, isGerant, async (req, res) => {
 
 // Add a new report and update corresponding service status.
 app.post('/addreport', isAuthenticated, async (req, res) => {
-  const { cin, sujet, nom, prenom, surface, limites_terrain, localisation, superficie_batiments_anciens, observations } = req.body;
+  const { 
+    cin, 
+    sujet, 
+    nom, 
+    prenom, 
+    surface, 
+    limites_terrain, 
+    localisation, 
+    superficie_batiments_anciens, 
+    observations 
+  } = req.body;
+  
   if (!cin || !sujet) {
     return res.redirect('/getreports?error=missing_required_fields');
   }
+  
   try {
+    // First get the transaction_number from services_utilisateur table
+    const [serviceResults] = await connection.query(
+      `SELECT numero_transaction FROM services_utilisateur WHERE cin = ? AND sujet = ?`,
+      [cin, sujet]
+    );
+    
+    if (!serviceResults.length) {
+      return res.redirect('/getreports?error=record_not_found');
+    }
+    
+    const transaction_number = serviceResults[0].numero_transaction;
+    
     await connection.beginTransaction();
+    
     await connection.query(
-      `INSERT INTO rapport 
-         (cin, sujet, nom, prenom, surface, limites_terrain, localisation, superficie_batiments_anciens, observations)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO rapport
+        (cin, sujet, nom, prenom, surface, limites_terrain, localisation, 
+         superficie_batiments_anciens, observations, numero_transaction)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         cin, sujet, nom, prenom,
-        surface || null, limites_terrain || null, localisation || null, superficie_batiments_anciens || null, observations || null
+        surface || null, limites_terrain || null, localisation || null, 
+        superficie_batiments_anciens || null, observations || null, transaction_number
       ]
     );
+    
     await connection.query(
       `UPDATE services_utilisateur SET status = 'تم' WHERE cin = ? AND sujet = ?`,
       [cin, sujet]
     );
+    
     await connection.commit();
     res.redirect('/getreports');
   } catch (err) {
@@ -649,6 +700,7 @@ app.get('/check-status', (req, res) => {
 // Process the check status form.
 app.post('/check-status', async (req, res) => {
   const { cin, transaction_number } = req.body;
+  
   if (!cin || !transaction_number) {
     return res.render('check-status', {
       title: 'التحقق من الحالة',
@@ -656,22 +708,65 @@ app.post('/check-status', async (req, res) => {
       formData: req.body
     });
   }
+  
   try {
-    const [results] = await connection.query(
-      `SELECT s.*, r.statut
-       FROM services_utilisateur s
-       LEFT JOIN results r ON s.cin = r.cin AND s.sujet = r.sujet
-       WHERE s.cin = ? AND s.numero_transaction = ?`,
+    // First check if the record exists in services_utilisateur
+    const [serviceResults] = await connection.query(
+      `SELECT * FROM services_utilisateur 
+       WHERE cin = ? AND numero_transaction = ?`,
       [cin, transaction_number]
     );
-    if (!results.length) {
+    
+    if (!serviceResults.length) {
       return res.render('check-status', {
         title: 'التحقق من الحالة',
         error: 'لم يتم العثور على نتائج مطابقة',
         formData: req.body
       });
     }
-    res.render('check-status', { title: 'التحقق من الحالة', result: results[0], error: null });
+    
+    // If record exists in services_utilisateur, check if it exists in rapport
+    const [rapportResults] = await connection.query(
+      `SELECT * FROM rapport 
+       WHERE cin = ? AND numero_transaction = ?`,
+      [cin, transaction_number]
+    );
+    
+    // Check if it exists in results
+    const [resultsTable] = await connection.query(
+      `SELECT * FROM results 
+       WHERE cin = ? AND numero_transaction = ?`,
+      [cin, transaction_number]
+    );
+    
+    const serviceRecord = serviceResults[0];
+    
+    // Set status based on existence in different tables
+    let status;
+    
+    if (resultsTable.length > 0) {
+      // If exists in results table, use the status field from there
+      status = resultsTable[0].statut;
+    } else if (rapportResults.length > 0) {
+      // Exists in services_utilisateur and rapport but not in results
+      status = 'بصدد الدرس';
+    } else {
+      // Exists in services_utilisateur but not in rapport
+      status = 'في انتظار التقرير';
+    }
+    
+    // Prepare the result object with all needed data
+    const result = {
+      ...serviceRecord,
+      statut: status
+    };
+    
+    res.render('check-status', { 
+      title: 'التحقق من الحالة', 
+      result: result, 
+      error: null 
+    });
+    
   } catch (err) {
     console.error('Check status error:', err.message);
     res.render('check-status', {

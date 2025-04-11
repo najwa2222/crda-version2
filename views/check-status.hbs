@@ -56,8 +56,12 @@
               <span class="font-medium">{{result.numero_transaction}}</span>
             </div>
             <div class="flex justify-between">
-              <span class="text-gray-600">الحالة النهائية:</span>
-              <span class="font-medium {{#if (eq result.statut 'مقبول')}}text-green-600{{else}}text-red-600{{/if}}">
+              <span class="text-gray-600">الحالة:</span>
+              <span class="font-medium 
+                {{#if (eq result.statut 'مقبول')}}text-green-600
+                {{else if (eq result.statut 'في انتظار التقرير')}}text-yellow-600
+                {{else if (eq result.statut 'بصدد الدرس')}}text-blue-600
+                {{else}}text-red-600{{/if}}">
                 {{result.statut}}
               </span>
             </div>

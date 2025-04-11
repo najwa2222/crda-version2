@@ -5,24 +5,18 @@ metadata:
   namespace: crda-namespace
 data:
   init.sql: |
-    -- Create database first
-    CREATE DATABASE IF NOT EXISTS base_crda;
-    USE base_crda;
-
     SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
     START TRANSACTION;
     SET time_zone = "+00:00";
 
-    -- Create app user and grant permissions
-    CREATE USER IF NOT EXISTS 'crda_user'@'%' IDENTIFIED BY 'placeholder_password';
-    GRANT SELECT, INSERT, UPDATE, DELETE ON base_crda.* TO 'crda_user'@'%';
+    CREATE DATABASE IF NOT EXISTS `base_crda`;
+    USE `base_crda`;
 
-    -- Table structure for table `services_utilisateur`
     CREATE TABLE `services_utilisateur` (
       `id` int(11) NOT NULL AUTO_INCREMENT,
       `prenom` varchar(255) DEFAULT NULL,
       `nom` varchar(255) DEFAULT NULL,
-      `cin` varchar(255) DEFAULT NULL,
+      `cin` varchar(255) NOT NULL,
       `numero_transaction` varchar(255) DEFAULT NULL,
       `certificat_propriete_terre` tinyint(1) DEFAULT NULL,
       `copie_piece_identite_fermier` tinyint(1) DEFAULT NULL,
@@ -30,19 +24,19 @@ data:
       `demande_but` tinyint(1) DEFAULT NULL,
       `copie_contrat_location_terrain` tinyint(1) DEFAULT NULL,
       `autres_documents` tinyint(1) DEFAULT NULL,
-      `sujet` varchar(255) DEFAULT NULL,
+      `sujet` varchar(255) NOT NULL,
       `status` varchar(255) NOT NULL DEFAULT 'قيد الانتظار',
       PRIMARY KEY (`id`),
-      UNIQUE KEY `unique_service` (`cin`, `sujet`),
+      UNIQUE KEY `idx_cin_sujet` (`cin`,`sujet`),
       KEY `idx_cin` (`cin`)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+    ) ENGINE=InnoDB AUTO_INCREMENT=84 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
-    -- Table structure for table `rapport`
     CREATE TABLE `rapport` (
       `id` int(11) NOT NULL AUTO_INCREMENT,
       `nom` varchar(255) NOT NULL,
       `prenom` varchar(255) NOT NULL,
-      `cin` varchar(50) NOT NULL,
+      `cin` varchar(255) NOT NULL,
+      `numero_transaction` varchar(255) DEFAULT NULL,
       `sujet` varchar(255) NOT NULL,
       `surface` decimal(10,2) NOT NULL,
       `limites_terrain` text NOT NULL,
@@ -50,13 +44,10 @@ data:
       `superficie_batiments_anciens` decimal(10,2) NOT NULL,
       `observations` text DEFAULT NULL,
       PRIMARY KEY (`id`),
-      UNIQUE KEY `idx_cin_sujet` (`cin`, `sujet`),
-      KEY `idx_cin` (`cin`),
-      CONSTRAINT `fk_rapport_service` FOREIGN KEY (`cin`, `sujet`)
-        REFERENCES `services_utilisateur` (`cin`, `sujet`) ON DELETE CASCADE
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+      UNIQUE KEY `idx_cin_sujet` (`cin`,`sujet`),
+      KEY `idx_cin` (`cin`)
+    ) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
-    -- Table structure for table `results`
     CREATE TABLE `results` (
       `id` int(11) NOT NULL AUTO_INCREMENT,
       `sujet` varchar(255) NOT NULL,
@@ -66,12 +57,16 @@ data:
       `numero_transaction` varchar(255) NOT NULL,
       `statut` enum('بصدد الدرس','مقبول','مرفوض') NOT NULL DEFAULT 'بصدد الدرس',
       PRIMARY KEY (`id`),
-      UNIQUE KEY `unique_service` (`cin`,`sujet`),
-      CONSTRAINT `fk_results_service` FOREIGN KEY (`cin`, `sujet`)
-        REFERENCES `services_utilisateur` (`cin`, `sujet`) ON DELETE CASCADE
+      UNIQUE KEY `unique_service` (`cin`,`sujet`)
+    ) ENGINE=InnoDB AUTO_INCREMENT=19 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+    CREATE TABLE `sessions` (
+      `session_id` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL,
+      `expires` int(11) UNSIGNED NOT NULL,
+      `data` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL,
+      PRIMARY KEY (`session_id`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
-    -- Table structure for table `utilisateur`
     CREATE TABLE `utilisateur` (
       `id` int(11) NOT NULL AUTO_INCREMENT,
       `nom_user` varchar(100) NOT NULL,
@@ -83,15 +78,24 @@ data:
       `role_user` enum('directeur','gerant','chef_dentreprise','pending') NOT NULL,
       `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
       `status_user` enum('pending','approved','rejected') DEFAULT 'pending',
-      PRIMARY KEY (`id`),
-      UNIQUE KEY `email_unique` (`email_user`),
-      UNIQUE KEY `cin_unique` (`cin_user`)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+      PRIMARY KEY (`id`)
+    ) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
-    -- Initial data with bcrypt hashed passwords (hash for '58877615')
-    INSERT INTO `utilisateur` (`nom_user`, `prenom_user`, `sex_user`, `cin_user`, `email_user`, `password_user`, `role_user`, `status_user`) VALUES
-    ('najwa', 'karrouchi', 'femme', '00001', 'najwakarrouchi@gmail.com', '$2b$10$rPg8jdTpMTNcWY3tNmOi7.rORWP3DfS7WOMQj8dQXLAYSKDhR9VfO', 'chef_dentreprise', 'approved'),
-    ('najwa', 'karrouchi', 'femme', '00002', 'najwakarrouchi2222@gmail.com', '$2b$10$rPg8jdTpMTNcWY3tNmOi7.rORWP3DfS7WOMQj8dQXLAYSKDhR9VfO', 'gerant', 'approved'),
-    ('najwa', 'karrouchi', 'femme', '00003', 'najwakarrouchi3333@gmail.com', '$2b$10$rPg8jdTpMTNcWY3tNmOi7.rORWP3DfS7WOMQj8dQXLAYSKDhR9VfO', 'directeur', 'approved');
+    ALTER TABLE `rapport`
+      ADD CONSTRAINT `fk_rapport_service` FOREIGN KEY (`cin`,`sujet`) REFERENCES `services_utilisateur` (`cin`, `sujet`) ON DELETE CASCADE;
+
+    INSERT INTO `services_utilisateur` (`id`, `prenom`, `nom`, `cin`, `numero_transaction`, `certificat_propriete_terre`, `copie_piece_identite_fermier`, `copie_piece_identite_nationale`, `demande_but`, `copie_contrat_location_terrain`, `autres_documents`, `sujet`, `status`) VALUES
+    (83, 'test', 'test', '12345678', '12345678', 1, 0, 1, 1, 0, 0, 'حفر بئر', 'تم');
+
+    INSERT INTO `rapport` (`id`, `nom`, `prenom`, `cin`, `numero_transaction`, `sujet`, `surface`, `limites_terrain`, `localisation`, `superficie_batiments_anciens`, `observations`) VALUES
+    (4, 'test', 'test', '12345678', '12345678', 'حفر بئر', '1234.00', '1234', '1234', '1234.00', '1234');
+
+    INSERT INTO `results` (`id`, `sujet`, `nom`, `prenom`, `cin`, `numero_transaction`, `statut`) VALUES
+    (18, 'حفر بئر', 'test', 'test', '12345678', '12345678', 'مقبول');
+
+    INSERT INTO `utilisateur` (`id`, `nom_user`, `prenom_user`, `sex_user`, `cin_user`, `email_user`, `password_user`, `role_user`, `created_at`, `status_user`) VALUES
+    (10, 'directeur', 'directeur', 'homme', '98765432', 'directeur@crda.com', '$2b$10$uWbOwlKaGKK7X5tKVTm6Euvwz1qJLSh1Pg5TpWAd7xxl4WGtu8eK2', 'directeur', '2025-04-11 20:59:41', 'approved'),
+    (11, 'chef', 'chef', 'femme', '14325544', 'chef@crda.com', '$2b$10$dX4nt39kPT9/VcV0JePDh.gys.mjdBAakTsAx56pg/ZTlzOhnATEu', 'chef_dentreprise', '2025-04-11 21:00:50', 'approved'),
+    (12, 'gerant', 'gerant', 'homme', '96268374', 'gerant@crda.com', '$2b$10$wFEHbAwY12YkYEy5WvdSQeTu1./6uL1qnDHfgq3g4iS5aWDkPRF.C', 'gerant', '2025-04-11 21:01:19', 'approved');
 
     COMMIT;
