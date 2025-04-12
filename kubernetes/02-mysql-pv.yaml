@@ -7,7 +7,7 @@ spec:
   capacity:
     storage: 2Gi
   accessModes:
-    - ReadWriteOnce
+    - ReadWriteOnce # Make sure to create the directory structure on your host: C:\temp\mysql-data
   hostPath:
-    path: "/mnt/data/mysql"
+    path: "/run/desktop/mnt/host/c/temp/mysql-data"  # Use a path that's accessible in Docker Desktop 
     type: DirectoryOrCreate

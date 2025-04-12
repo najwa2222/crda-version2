@@ -113,6 +113,7 @@ pipeline {
                             '00-namespace.yaml',
                             '02-mysql-pv.yaml',
                             '03-mysql-pvc.yaml',
+                            '04-mysql-config.yaml',            // <-- Added here
                             '04-mysql-init-script.yaml',
                             '05-mysql-deployment.yaml',
                             '06-mysql-service.yaml',
@@ -144,6 +145,7 @@ pipeline {
                 }
             }
         }
+
 
         stage('Verify Deployment') {
             steps {

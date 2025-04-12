@@ -17,19 +17,6 @@ spec:
         app: mysql
         tier: database
     spec:
-      # Restore security context from working config
-      securityContext:
-        runAsUser: 999
-        fsGroup: 999
-      
-      initContainers:
-      - name: permission-fix
-        image: busybox
-        command: ["sh", "-c", "chown -R 999:999 /var/lib/mysql && chmod -R 750 /var/lib/mysql"]
-        volumeMounts:
-        - name: mysql-persistent-storage
-          mountPath: /var/lib/mysql
-
       containers:
       - name: mysql
         image: mysql:8.0
@@ -48,7 +35,7 @@ spec:
             secretKeyRef:
               name: mysql-secret
               key: app-password
-        - name: MYSQL_ARGS  # Add back from working config
+        - name: MYSQL_ARGS
           value: "--default-authentication-plugin=mysql_native_password"
         
         ports:
@@ -60,7 +47,11 @@ spec:
           mountPath: /var/lib/mysql
         - name: mysql-init-script
           mountPath: /docker-entrypoint-initdb.d
-        
+        - name: mysql-custom-config
+          mountPath: /etc/mysql/conf.d/my.cnf
+          subPath: my.cnf
+
+
         # Liveness probe using shell for variable substitution
         livenessProbe:
           exec:
@@ -78,7 +69,7 @@ spec:
             command:
             - sh
             - -c
-            - "mysql -u$MYSQL_USER -p$MYSQL_PASSWORD -e 'SELECT 1'"
+            - "mysqladmin ping -uroot -p$MYSQL_ROOT_PASSWORD"
           initialDelaySeconds: 15
           periodSeconds: 10
 
@@ -89,3 +80,6 @@ spec:
       - name: mysql-init-script
         configMap:
           name: mysql-init-script
+      - name: mysql-custom-config
+        configMap:
+          name: mysql-config
