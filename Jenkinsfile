@@ -34,8 +34,8 @@ pipeline {
 
         stage('Static Code Analysis') {
             steps {
-                bat 'npm run lint -- --config .eslintrc.cjs'
-                bat 'npm run lint:fix -- --config .eslintrc.cjs'
+                bat 'npm run lint -- --config eslint.config.js'  // Check for linting issues
+                bat 'npm run lint:fix -- --config eslint.config.js'  // Fix automatically fixable issues
             }
         }
 

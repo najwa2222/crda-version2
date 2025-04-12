@@ -1,4 +1,4 @@
-import mysql from 'mysql2/promise';
+import mysql from 'mysql2/promise'; // eslint-disable-line no-unused-vars
 
 // Mock MySQL connection
 jest.mock('mysql2/promise', () => {
@@ -17,16 +17,17 @@ jest.mock('mysql2/promise', () => {
 
 // Mock express-mysql-session
 jest.mock('express-mysql-session', () => {
-  return function() {
-    return function() {
-      return {
-        // Mock session store methods
-        get: jest.fn(),
-        set: jest.fn(),
-        destroy: jest.fn()
-      };
+  return jest.fn().mockImplementation(() => {
+    return {
+      get: jest.fn(),
+      set: jest.fn(),
+      destroy: jest.fn(),
+      // You can also mock session options if needed
+      storeOptions: {
+        ttl: 3600
+      }
     };
-  };
+  });
 });
 
 // Mock express-session
@@ -35,7 +36,8 @@ jest.mock('express-session', () => {
     return (req, res, next) => {
       req.session = {
         id: 'test-session-id',
-        save: (callback) => callback && callback()
+        user: { id: 1, role_user: 'chef_dentreprise' }, // Mock user object if needed
+        save: jest.fn((callback) => callback && callback())
       };
       next();
     };

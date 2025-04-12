@@ -781,7 +781,9 @@ app.post('/check-status', async (req, res) => {
 app.use((err, req, res, next) => {
   console.error('Global error:', err);
   res.status(500).render('error', { message: 'حدث خطأ غير متوقع', error: IS_PROD ? {} : err });
+  next(err);  // Pass the error to the next middleware if needed
 });
+
 
 // 404 handler.
 app.use((req, res) => {

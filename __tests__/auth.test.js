@@ -67,7 +67,7 @@ describe('Authentication API', () => {
       );
       expect(bcrypt.compare).toHaveBeenCalledWith('correctpassword', 'hashedPassword');
     });
-    
+
     it('should redirect to unapproved page when account is not approved', async () => {
       // Mock user exists but not approved
       const mockUser = {
@@ -92,6 +92,36 @@ describe('Authentication API', () => {
 
       expect(response.statusCode).toBe(302); // Redirect
       expect(response.headers.location).toBe('/unapproved_login');
+    });
+
+    it('should handle database errors gracefully', async () => {
+      // Simulate a DB error when querying for the user
+      mockConnection.query.mockRejectedValueOnce(new Error('Database error'));
+
+      const response = await request(app)
+        .post('/login')
+        .send({
+          email_user: 'test@crda.com',
+          password_user: 'anyPassword'
+        });
+
+      expect(response.statusCode).toBe(500); // Internal Server Error
+      expect(response.text).toBe('Database error occurred');
+    });
+
+    it('should return 500 error when bcrypt comparison fails', async () => {
+      // Simulate bcrypt failure
+      bcrypt.compare.mockRejectedValueOnce(new Error('bcrypt error'));
+
+      const response = await request(app)
+        .post('/login')
+        .send({
+          email_user: 'test@crda.com',
+          password_user: 'correctpassword'
+        });
+
+      expect(response.statusCode).toBe(500); // Internal Server Error
+      expect(response.text).toBe('Password verification failed');
     });
   });
 });

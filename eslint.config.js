@@ -1,45 +1,48 @@
-// eslint.config.js
 import js from '@eslint/js';
-import pkg from 'globals';  // Import the entire globals package
-const { node, jest } = pkg;  // Destructure node and jest from the package
 import eslintPluginJest from 'eslint-plugin-jest';
 
 export default [
-  // Include the recommended ESLint rules directly in the config array
+  // ESLint recommended rules
   js.configs.recommended,
-  
+
   {
     files: ['**/*.js'],
     languageOptions: {
       globals: {
-        ...node,
+        node: 'readonly',
         process: 'readonly',
         console: 'readonly',
-      }
+        setTimeout: 'readonly', // Add setTimeout here if you want to allow it
+      },
     },
     rules: {
       'no-unused-vars': 'warn',
-      'no-console': 'off'
+      'no-console': 'off',
     },
     ignores: [
       '**/node_modules/',
       'coverage/',
       'public/',
-      '**/*.config.js'
+      '**/*.config.js',
     ],
   },
   {
     files: ['**/__tests__/**/*.js', '**/*.test.js'],
     languageOptions: {
       globals: {
-        ...jest
-      }
+        jest: 'readonly', // Allow Jest globals
+        describe: 'readonly',
+        beforeEach: 'readonly',
+        it: 'readonly',
+        expect: 'readonly',
+        beforeAll: 'readonly', // Explicitly add beforeAll to avoid the error
+      },
     },
     plugins: {
-      jest: eslintPluginJest
+      jest: eslintPluginJest,
     },
     rules: {
-      // Jest-specific rules can go here
-    }
-  }
+      // Jest-specific rules can be added here if necessary
+    },
+  },
 ];

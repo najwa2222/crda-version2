@@ -3,18 +3,28 @@ import request from 'supertest';
 import app from '../app.js';
 import mysql from 'mysql2/promise';
 
-// Mock connection
-const mockConnection = await mysql.createConnection({});
+// Mock the `mysql2/promise` module
+jest.mock('mysql2/promise');
 
 describe('Services API', () => {
+  let mockConnection;
+
+  // Mock query method on the connection
+  beforeAll(() => {
+    mockConnection = {
+      query: jest.fn(),
+    };
+    // Mock `mysql.createConnection` to return our mock connection
+    mysql.createConnection.mockResolvedValue(mockConnection);
+  });
+
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
   describe('GET /getservices', () => {
     it('should redirect to login when user is not authenticated', async () => {
-      // Note: By default our mocked session won't have user data
-
+      // Make a request without authentication headers
       const response = await request(app).get('/getservices');
       
       expect(response.statusCode).toBe(302);
@@ -33,7 +43,8 @@ describe('Services API', () => {
           status: 'قيد الانتظار'
         }
       ];
-      
+
+      // Mock the database query to resolve with the mock services data
       mockConnection.query.mockResolvedValueOnce([mockServices]);
 
       // Create authenticated session for this request only
@@ -42,11 +53,14 @@ describe('Services API', () => {
         .set('Cookie', ['connect.sid=test-sid'])
         .set('Authorization', 'Bearer test-token');
       
-      // This would still redirect in a real test because we need more
-      // session mocking, but this shows the pattern
+      // Ensure that the query method was called with the expected SQL query
       expect(mockConnection.query).toHaveBeenCalledWith(
         expect.stringContaining('SELECT s.*, IF(r.id IS NOT NULL, \'تم\', \'قيد الانتظار\') AS status')
       );
+
+      // You can also assert response status and data if needed
+      expect(response.statusCode).toBe(200);
+      expect(response.body).toEqual(mockServices);
     });
   });
 });

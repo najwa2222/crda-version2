@@ -1,4 +1,3 @@
-// __tests__/delete-api.test.js
 import request from 'supertest';
 import app from '../app.js';
 import mysql from 'mysql2/promise';
@@ -16,19 +15,12 @@ describe('DELETE API Endpoints', () => {
       // Mock successful deletion
       mockConnection.query.mockResolvedValueOnce([{ affectedRows: 1 }]);
 
-      // We'll need to mock authentication for this test
-      // This is a simplified example - in real tests you would need to
-      // properly set up the session with a user
-
-      const app_with_user = request(app);
       // Simulate authenticated user with a chef role
-      app_with_user.session = { user: { id: 1, role_user: 'chef_dentreprise' } };
-
-      const response = await app_with_user
+      await request(app)
         .delete('/api/services/1')
-        .send();
+        .set('Cookie', ['connect.sid=test-sid']) // Use the mock session cookie
+        .set('Authorization', 'Bearer test-token') // Mock authorization header
 
-      // This would fail in real tests without proper session mocking
       expect(mockConnection.query).toHaveBeenCalledWith(
         'DELETE FROM services_utilisateur WHERE id = ?',
         ['1']
@@ -45,10 +37,11 @@ describe('DELETE API Endpoints', () => {
       // Mock delete from rapport
       mockConnection.query.mockResolvedValueOnce([{ affectedRows: 1 }]);
 
-      // Again, this is a simplified example showing the pattern
-      const response = await request(app)
+      // Perform the DELETE request
+      await request(app)
         .delete('/api/reports/1')
-        .send();
+        .set('Cookie', ['connect.sid=test-sid']) // Set the mock session cookie
+        .set('Authorization', 'Bearer test-token') // Mock authorization header
 
       expect(mockConnection.beginTransaction).toHaveBeenCalled();
       expect(mockConnection.query).toHaveBeenNthCalledWith(
@@ -56,20 +49,31 @@ describe('DELETE API Endpoints', () => {
         'SELECT cin, sujet FROM rapport WHERE id = ?',
         ['1']
       );
+      expect(mockConnection.query).toHaveBeenNthCalledWith(
+        2,
+        'DELETE FROM results WHERE cin = ?',
+        ['12345678']
+      );
+      expect(mockConnection.query).toHaveBeenNthCalledWith(
+        3,
+        'DELETE FROM rapport WHERE id = ?',
+        ['1']
+      );
       expect(mockConnection.commit).toHaveBeenCalled();
     });
 
     it('should rollback transaction when report is not found', async () => {
       // Mock report doesn't exist
-      mockConnection.query.mockResolvedValueOnce([[]]);
+      mockConnection.query.mockResolvedValueOnce([[]]); // Simulate no report found
 
-      const response = await request(app)
+      await request(app)
         .delete('/api/reports/999')
-        .send();
+        .set('Cookie', ['connect.sid=test-sid']) // Mock session cookie
+        .set('Authorization', 'Bearer test-token') // Mock authorization header
 
       expect(mockConnection.beginTransaction).toHaveBeenCalled();
       expect(mockConnection.rollback).toHaveBeenCalled();
-      // In real test this would return a 404
+      // In real test this would return a 404 error, simulate rollback on no report
     });
   });
 });
