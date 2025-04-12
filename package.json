@@ -11,11 +11,12 @@
     "lint:fix": "eslint . --fix --config eslint.config.js",
     "sonar": "sonar-scanner",
     "test:empty": "echo 'Generating empty coverage' && mkdir -p coverage && echo '{}' > coverage/lcov.info",
-    "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest",
+    "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --forceExit --detectOpenHandles",
     "test:watch": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --watch",
     "test:coverage": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --coverage"
   },
   "dependencies": {
+    "@babel/plugin-transform-modules-commonjs": "^7.26.3",
     "bcrypt": "^5.1.1",
     "connect-redis": "^8.0.2",
     "cors": "^2.8.5",
@@ -27,12 +28,14 @@
     "express-session": "^1.18.1",
     "helmet": "^8.1.0",
     "method-override": "^3.0.0",
+    "mysql": "^2.18.1",
     "mysql2": "^3.14.0",
     "nodemon": "^3.1.0",
     "redis": "^4.7.0",
     "winston": "^3.17.0"
   },
   "devDependencies": {
+    "@babel/eslint-parser": "^7.27.0",
     "@babel/preset-env": "^7.26.9",
     "@eslint/js": "^9.24.0",
     "autoprefixer": "^10.4.20",

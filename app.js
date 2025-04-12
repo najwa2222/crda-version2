@@ -159,16 +159,19 @@ const isDirecteur = createRoleCheck('directeur');
 
 // --- Routes ---
 
-// Health check: used by container orchestration to ensure the app is running.
+
 app.get('/health', async (req, res) => {
-  if (!connection) {
-    return res.status(503).send('DB not connected yet');
-  }
   try {
+    const mysql = await import('mysql2/promise');
+    const connection = await mysql.createConnection(process.env.DB_URL);
+    
     await connection.query('SELECT 1');
     res.status(200).send('OK');
+    await connection.end();
   } catch (err) {
-    console.error('Health check failed:', err.message);
+    if (process.env.NODE_ENV !== 'test') {
+      console.error('Health check failed:', err.message);
+    }
     res.status(500).send('DB query failed');
   }
 });
@@ -779,22 +782,38 @@ app.post('/check-status', async (req, res) => {
 
 // --- Global Error Handling ---
 app.use((err, req, res, next) => {
+  if (res.headersSent) return next(err);
+  
   console.error('Global error:', err);
-  res.status(500).render('error', { message: 'حدث خطأ غير متوقع', error: IS_PROD ? {} : err });
-  next(err);  // Pass the error to the next middleware if needed
-});
-
-
-// 404 handler.
-app.use((req, res) => {
-  res.status(404).render('error', { message: 'الصفحة غير موجودة', error: { status: 404 } });
-});
-
-// --- Start the Server ---
-initializeDatabase().then(() => {
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server running on port ${PORT}`);
+  res.status(err.status || 500).render('error', {
+    message: 'حدث خطأ غير متوقع',
+    error: IS_PROD ? {} : err,
+    status: err.status || 500
   });
 });
 
+// 404 handler
+app.use((req, res) => {
+  res.status(404).render('error', { 
+    message: 'الصفحة غير موجودة', 
+    error: { status: 404 },
+    status: 404
+  });
+});
+
+// --- Server Initialization ---
+let server;
+
+initializeDatabase()
+  .then(() => {
+    server = app.listen(PORT, '0.0.0.0', () => {
+      console.log(`Server running on port ${PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.error('Server startup failed:', err);
+    process.exit(1);
+  });
+
+export { server };
 export default app;

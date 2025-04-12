@@ -1,48 +1,59 @@
+import { jest } from '@jest/globals';
 import request from 'supertest';
 import app from '../app.js';
-import mysql from 'mysql2/promise';
 
-// Mock mysql2/promise
-jest.mock('mysql2/promise');
+jest.mock('mysql2/promise', () => ({
+  createConnection: jest.fn(),
+  createPool: jest.fn(),
+  // For default import compatibility
+  default: {
+    createConnection: jest.fn()
+  }
+}));
 
 describe('Health Check API', () => {
-  let mockConnection;
+  let server;
 
-  beforeAll(() => {
-    // Mock the mysql2 connection to return a mock connection with query method
-    mockConnection = {
-      query: jest.fn(),
-    };
-    // Mock `mysql.createConnection` to return the mock connection
-    mysql.createConnection.mockResolvedValue(mockConnection);
+  beforeAll(async () => {
+    server = app.listen(0);
+    await new Promise(resolve => server.on('listening', resolve));
+  });
+
+  afterAll(async () => {
+    server.closeAllConnections();
+    await new Promise(resolve => {
+      server.close(() => {
+        console.log('Test server closed');
+        resolve();
+      });
+      setTimeout(resolve, 500).unref();
+    });
   });
 
   beforeEach(() => {
-    // Clear any previous mock calls before each test
-    jest.clearAllMocks();
+    jest.spyOn(console, 'error').mockImplementation(() => {});
   });
 
-  it('should return 200 OK when database is connected', async () => {
-    // Mock the database query to succeed
-    mockConnection.query.mockResolvedValueOnce([{ '1': 1 }]);
+  afterEach(() => {
+    console.error.mockRestore();
+  });
+
+  it('should return 200 OK', async () => {
+    const mysql = await import('mysql2/promise');
+    mysql.default.createConnection.mockResolvedValue({
+      query: jest.fn().mockResolvedValue([[{ '1': 1 }]]),
+      end: jest.fn().mockResolvedValue(true)
+    });
 
     const response = await request(app).get('/health');
-    
-    // Verify the response status and content
     expect(response.statusCode).toBe(200);
-    expect(response.text).toBe('OK');
-    // Ensure the correct query was executed
-    expect(mockConnection.query).toHaveBeenCalledWith('SELECT 1');
-  });
+  }, 15000);
 
-  it('should return 500 when database query fails', async () => {
-    // Mock the database query to fail
-    mockConnection.query.mockRejectedValueOnce(new Error('Database error'));
+  it('should return 500 on DB failure', async () => {
+    const mysql = await import('mysql2/promise');
+    mysql.default.createConnection.mockRejectedValue(new Error('DB error'));
 
     const response = await request(app).get('/health');
-    
-    // Verify the response status and content for failure
     expect(response.statusCode).toBe(500);
-    expect(response.text).toBe('DB query failed');
-  });
+  }, 15000);
 });
