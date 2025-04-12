@@ -113,12 +113,12 @@ pipeline {
                             '00-namespace.yaml',
                             '02-mysql-pv.yaml',
                             '03-mysql-pvc.yaml',
-                            '04-mysql-config.yaml',            // <-- Added here
-                            '04-mysql-init-script.yaml',
-                            '05-mysql-deployment.yaml',
-                            '06-mysql-service.yaml',
-                            '07-app-deployment.yaml',
-                            '08-app-service.yaml'
+                            '04-mysql-config.yaml',
+                            '05-mysql-init-script.yaml',
+                            '06-mysql-deployment.yaml',
+                            '07-mysql-service.yaml',
+                            '08-app-deployment.yaml',
+                            '09-app-service.yaml'
                         ]
 
                         manifestOrder.each { file ->
