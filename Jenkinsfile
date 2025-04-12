@@ -42,6 +42,19 @@ pipeline {
         stage('Run Tests') {
             steps {
                 bat 'npm test'
+                
+                // Archive test results if you're using JUnit reporter
+                // Install jest-junit: npm install --save-dev jest-junit
+                bat 'npm test -- --ci --reporters=default --reporters=jest-junit'
+                junit 'junit.xml'
+                
+                // Process coverage results
+                publishCoverage adapters: [istanbulCoberturaAdapter('coverage/cobertura-coverage.xml')]
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'coverage/**', allowEmptyArchive: true
+                }
             }
         }
 
