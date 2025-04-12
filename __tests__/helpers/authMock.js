@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 // __tests__/helpers/authMock.js
 import { jest } from '@jest/globals';
 import request from 'supertest';

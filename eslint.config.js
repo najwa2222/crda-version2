@@ -11,7 +11,7 @@ export default [
         node: 'readonly',
         process: 'readonly',
         console: 'readonly',
-        setTimeout: 'readonly', // Allow setTimeout
+        setTimeout: 'readonly',
       },
     },
     files: ['**/*.js'],
@@ -29,31 +29,33 @@ export default [
   {
     languageOptions: {
       globals: {
-        jest: 'readonly', // Allow Jest globals
+        jest: 'readonly',
         describe: 'readonly',
         beforeEach: 'readonly',
+        afterEach: 'readonly',  // ✅ Added
+        beforeAll: 'readonly',
+        afterAll: 'readonly',   // ✅ Added
         it: 'readonly',
         expect: 'readonly',
-        beforeAll: 'readonly',
       },
     },
-    files: ['**/__tests__/**/*.js', '**/*.test.js'],
+    files: ['**/__tests__/**/*.js', '**/*.test.js', '**/jest/**/*.js'], // ✅ You had setup.js here
     plugins: {
       jest: eslintPluginJest,
     },
     rules: {
-      // Jest-specific rules can be added here if necessary
+      // Add any Jest rules here if needed
     },
   },
   {
     languageOptions: {
       globals: {
-        jest: 'readonly', // Allow Jest globals in mock files
+        jest: 'readonly',
       },
     },
-    files: ['**/__mocks__/**/*.js'], // Add specific rule for mock files
+    files: ['**/__mocks__/**/*.js'],
     rules: {
-      'no-undef': 'off', // Disable "no-undef" for mock files
+      'no-undef': 'off',
     },
   },
 ];
