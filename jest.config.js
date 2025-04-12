@@ -16,4 +16,8 @@ export default {
   transform: {
     '^.+\\.js$': 'babel-jest',
   },
+  // Ensure Jest knows how to map mysql2/promise
+  moduleNameMapper: {
+    '^mysql2/promise$': '<rootDir>/__mocks__/mysql2/promise.js',
+  },
 };

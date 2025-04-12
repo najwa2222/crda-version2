@@ -2,10 +2,24 @@ import request from 'supertest';
 import app from '../app.js';
 import mysql from 'mysql2/promise';
 
-// Mock connection
-const mockConnection = await mysql.createConnection({});
+// Mock mysql2/promise
+jest.mock('mysql2/promise');
 
 describe('DELETE API Endpoints', () => {
+  let mockConnection;
+
+  // Mock connection and ensure mock queries are available
+  beforeAll(() => {
+    mockConnection = {
+      query: jest.fn(),
+      beginTransaction: jest.fn(),
+      commit: jest.fn(),
+      rollback: jest.fn(),
+    };
+    // Mock `createConnection` to return our mock connection
+    mysql.createConnection.mockResolvedValue(mockConnection);
+  });
+
   beforeEach(() => {
     jest.clearAllMocks();
   });
@@ -16,15 +30,16 @@ describe('DELETE API Endpoints', () => {
       mockConnection.query.mockResolvedValueOnce([{ affectedRows: 1 }]);
 
       // Simulate authenticated user with a chef role
-      await request(app)
+      const response = await request(app)
         .delete('/api/services/1')
         .set('Cookie', ['connect.sid=test-sid']) // Use the mock session cookie
-        .set('Authorization', 'Bearer test-token') // Mock authorization header
+        .set('Authorization', 'Bearer test-token'); // Mock authorization header
 
       expect(mockConnection.query).toHaveBeenCalledWith(
         'DELETE FROM services_utilisateur WHERE id = ?',
         ['1']
       );
+      expect(response.statusCode).toBe(200); // Assuming 200 for successful deletion
     });
   });
 
@@ -41,7 +56,7 @@ describe('DELETE API Endpoints', () => {
       await request(app)
         .delete('/api/reports/1')
         .set('Cookie', ['connect.sid=test-sid']) // Set the mock session cookie
-        .set('Authorization', 'Bearer test-token') // Mock authorization header
+        .set('Authorization', 'Bearer test-token'); // Mock authorization header
 
       expect(mockConnection.beginTransaction).toHaveBeenCalled();
       expect(mockConnection.query).toHaveBeenNthCalledWith(
@@ -69,11 +84,11 @@ describe('DELETE API Endpoints', () => {
       await request(app)
         .delete('/api/reports/999')
         .set('Cookie', ['connect.sid=test-sid']) // Mock session cookie
-        .set('Authorization', 'Bearer test-token') // Mock authorization header
+        .set('Authorization', 'Bearer test-token'); // Mock authorization header
 
       expect(mockConnection.beginTransaction).toHaveBeenCalled();
       expect(mockConnection.rollback).toHaveBeenCalled();
-      // In real test this would return a 404 error, simulate rollback on no report
+      // In real test, this would return a 404 error, simulate rollback on no report
     });
   });
 });
