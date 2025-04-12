@@ -1,10 +1,13 @@
-// @ts-nocheck
-const js = require('@eslint/js');
-const { node, jest } = require('globals');
-const eslintPluginJest = require('eslint-plugin-jest');
+// eslint.config.js
+import js from '@eslint/js';
+import pkg from 'globals';  // Import the entire globals package
+const { node, jest } = pkg;  // Destructure node and jest from the package
+import eslintPluginJest from 'eslint-plugin-jest';
 
-module.exports = [
+export default [
+  // Include the recommended ESLint rules directly in the config array
   js.configs.recommended,
+  
   {
     files: ['**/*.js'],
     languageOptions: {
@@ -23,7 +26,7 @@ module.exports = [
       'coverage/',
       'public/',
       '**/*.config.js'
-    },
+    ],
   },
   {
     files: ['**/__tests__/**/*.js', '**/*.test.js'],

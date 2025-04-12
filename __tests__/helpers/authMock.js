@@ -6,6 +6,8 @@
  * @param {Object} user - User object to set in session
  * @returns {Object} - Supertest request object with authenticated session
  */
+import request from 'supertest'; // Add this line to import supertest
+
 export function authenticatedSession(app, user = {}) {
     const agent = request.agent(app);
     
