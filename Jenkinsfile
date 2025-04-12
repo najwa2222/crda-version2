@@ -31,17 +31,11 @@ pipeline {
         stage('Install Dependencies') {
             steps {
                 script {
-                    cache([
-                        [$class: 'ArbitraryFileCache', 
-                        path: 'node_modules/**',
-                        excludes: 'node_modules/.cache'
-                        ]
-                    ]) {
-                        if (isUnix()) {
-                            sh 'npm ci --prefer-offline --no-audit --no-fund'
-                        } else {
-                            bat 'npm ci --prefer-offline --no-audit --no-fund'
-                        }
+                    // Directly install without caching the node_modules folder.
+                    if (isUnix()) {
+                        sh 'npm ci --prefer-offline --no-audit --no-fund'
+                    } else {
+                        bat 'npm ci --prefer-offline --no-audit --no-fund'
                     }
                 }
             }
@@ -73,7 +67,6 @@ pipeline {
                     } else {
                         bat 'npm test -- --ci --coverage --reporters=default --reporters=jest-junit'
                     }
-                    
                     junit 'test-results/**/*.xml'
                     publishCoverage adapters: [istanbulCoberturaAdapter('coverage/cobertura-coverage.xml')]
                 }
@@ -304,7 +297,7 @@ pipeline {
                 if (isUnix()) {
                     sh "rm -rf ${TRIVY_CACHE_DIR}"
                 } else {
-                    bat "rmdir /s/q ${TRIVY_CACHE_DIR}"
+                    bat "rmdir /s /q ${TRIVY_CACHE_DIR}"
                 }
                 cleanWs()
             }
