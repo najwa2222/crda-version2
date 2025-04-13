@@ -63,10 +63,10 @@ pipeline {
             steps {
                 script {
                     if (isUnix()) {
-                        sh 'npm test -- --ci --coverage --reporters=default --reporters=jest-junit'
+                        sh 'npm test -- --ci --coverage --reporters=default --reporters=jest-junit > jest-output.log'
                         sh 'mkdir -p reports && mv -f junit.xml reports/junit.xml'
                     } else {
-                        bat 'npm test -- --ci --coverage --reporters=default --reporters=jest-junit'
+                        bat 'npm test -- --ci --coverage --reporters=default --reporters=jest-junit > jest-output.log'
                         bat 'if not exist reports mkdir reports'
                         bat 'move /Y junit.xml reports\\junit.xml'
                     }
