@@ -162,17 +162,9 @@ const isDirecteur = createRoleCheck('directeur');
 
 app.get('/health', async (req, res) => {
   try {
-    let connection;
-
-    // In test env, use dynamic import so mocking works
-    if (process.env.NODE_ENV === 'test') {
-      const mysql = await import('mysql2/promise');
-      connection = await mysql.default.createConnection(process.env.DB_URL);
-    } else {
-      // In prod or dev, use regular require (safer in some runtimes)
-      const mysql = require('mysql2/promise');
-      connection = await mysql.createConnection(process.env.DB_URL);
-    }
+    const mysqlModule = await import('mysql2/promise');
+    const mysql = mysqlModule.default || mysqlModule;
+    const connection = await mysql.createConnection(process.env.DB_URL);
 
     await connection.query('SELECT 1');
     res.status(200).send('OK');
@@ -184,6 +176,7 @@ app.get('/health', async (req, res) => {
     res.status(500).send('DB query failed');
   }
 });
+
 
 // Home and About pages
 app.get('/', (req, res) => res.render('index', { title: 'Home', layout: 'main' }));
