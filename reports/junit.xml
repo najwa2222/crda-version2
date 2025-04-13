@@ -1,9 +1,27 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuites name="jest tests" tests="2" failures="0" errors="0" time="2.041">
-  <testsuite name="Health Check API" errors="0" failures="0" skipped="0" timestamp="2025-04-13T15:23:19" time="1.907" tests="2">
-    <testcase classname="Health Check API should return 200 OK" name="Health Check API should return 200 OK" time="0.151">
+<testsuites name="jest tests" tests="5" failures="2" errors="0" time="2.84">
+  <testsuite name="Health Check API" errors="0" failures="2" skipped="0" timestamp="2025-04-13T18:29:31" time="2.64" tests="5">
+    <testcase classname="Health Check API should return 200 OK" name="Health Check API should return 200 OK" time="0.135">
     </testcase>
-    <testcase classname="Health Check API should return 500 on DB failure" name="Health Check API should return 500 on DB failure" time="0.023">
+    <testcase classname="Health Check API should return 503 on DB failure" name="Health Check API should return 503 on DB failure" time="0.035">
+    </testcase>
+    <testcase classname="Health Check API should handle multiple queries (DB success)" name="Health Check API should handle multiple queries (DB success)" time="0.028">
+      <failure>Error: expect(jest.fn()).toHaveBeenCalledTimes(expected)
+
+Expected number of calls: 2
+Received number of calls: 1
+    at Object.&lt;anonymous&gt; (C:\Users\MohamedTabbabi\Desktop\Unified application code\__tests__\health.test.js:74:34)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)</failure>
+    </testcase>
+    <testcase classname="Health Check API should return 503 if MySQL server is down" name="Health Check API should return 503 if MySQL server is down" time="0.058">
+    </testcase>
+    <testcase classname="Health Check API should handle missing DB credentials gracefully" name="Health Check API should handle missing DB credentials gracefully" time="0.025">
+      <failure>Error: expect(received).toBe(expected) // Object.is equality
+
+Expected: 500
+Received: 503
+    at Object.&lt;anonymous&gt; (C:\Users\MohamedTabbabi\Desktop\Unified application code\__tests__\health.test.js:94:33)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)</failure>
     </testcase>
   </testsuite>
 </testsuites>
