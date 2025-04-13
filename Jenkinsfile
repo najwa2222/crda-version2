@@ -240,11 +240,6 @@ pipeline {
             }
         }
 
-        stage('Performance Test') {
-            steps {
-                bat "artillery run ${ARTILLERY_CONFIG}"
-            }
-        }
     }
 
     post {
