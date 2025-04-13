@@ -9,7 +9,7 @@ pipeline {
         SONAR_PROJECT_KEY = "najwa22_crda-app"
         SONAR_SERVER_URL = "http://localhost:9000"
         SONAR_TOKEN_CREDENTIALS_ID = "sonarqube-token"
-        NODE_OPTIONS = "--experimental-vm-modules --no-warnings"
+        NODE_OPTIONS = "--no-warnings --experimental-vm-modules"
         COVERAGE_REPORT = "coverage/lcov.info"
         TRIVY_CACHE_DIR = ".trivycache"
         TRIVY_SEVERITY = "CRITICAL"
@@ -63,10 +63,10 @@ pipeline {
             steps {
                 script {
                     if (isUnix()) {
-                        sh 'npm test -- --ci --coverage --reporters=default --reporters=jest-junit > jest-output.log'
+                        sh 'npm test -- --ci --coverage --reporters=default --reporters=jest-junit --testTimeout=30000 1>jest-output.log'
                         sh 'mkdir -p reports && mv -f junit.xml reports/junit.xml'
                     } else {
-                        bat 'npm test -- --ci --coverage --reporters=default --reporters=jest-junit > jest-output.log'
+                        bat 'npm test -- --ci --coverage --reporters=default --reporters=jest-junit --testTimeout=30000 1>jest-output.log'
                         bat 'if not exist reports mkdir reports'
                         bat 'move /Y junit.xml reports\\junit.xml'
                     }
@@ -74,8 +74,18 @@ pipeline {
                     publishCoverage adapters: [istanbulCoberturaAdapter('coverage/cobertura-coverage.xml')]
                 }
             }
+            post {
+                always {
+                    // Forcefully terminate any hanging Node processes
+                    if (isUnix()) {
+                        sh 'killall node || true'
+                    } else {
+                        bat 'taskkill /F /IM node.exe || true'
+                    }
+                    cleanWs()  // Clean up the workspace
+                }
+            }
         }
-
 
         stage('SonarQube Analysis') {
             steps {
