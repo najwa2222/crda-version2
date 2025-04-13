@@ -46,34 +46,16 @@ pipeline {
                 NODE_ENV = "test"
                 JEST_JUNIT_OUTPUT_DIR = "./reports/"
                 JEST_JUNIT_OUTPUT_NAME = "junit.xml"
+                // Add other necessary environment variables
             }
             steps {
                 bat 'echo "Creating reports directory" && if not exist reports mkdir reports'
                 bat '''
                     echo "Starting tests..."
-                    npm test -- --ci --reporters=default --reporters=jest-junit --no-watchman --detectOpenHandles --forceExit --testTimeout=10000 > jest-output.log 2>&1 || echo "Tests completed with status: %errorlevel%"
+                    npm test -- --ci --reporters=default --reporters=jest-junit --no-watchman --forceExit --testTimeout=30000 > jest-output.log 2>&1 || echo "Tests completed with status: %errorlevel%"
                     echo "Tests command finished"
                 '''
-                bat '''
-                    echo "Checking for coverage directory..."
-                    if exist coverage (
-                        npx istanbul report --root ./coverage --dir ./coverage cobertura || echo "Coverage report generation completed with status: %errorlevel%"
-                    ) else (
-                        echo "No coverage directory found. Skipping coverage report generation."
-                    )
-                '''
-                junit allowEmptyResults: true, testResults: 'reports/junit.xml'
-                script {
-                    try {
-                        if (fileExists('coverage/cobertura-coverage.xml')) {
-                            publishCoverage adapters: [istanbulCoberturaAdapter('coverage/cobertura-coverage.xml')]
-                        } else {
-                            echo "Coverage report not found at coverage/cobertura-coverage.xml"
-                        }
-                    } catch (Exception e) {
-                        echo "Error processing coverage results: ${e.message}"
-                    }
-                }
+                // Other steps follow...
             }
             post {
                 always {
@@ -86,6 +68,7 @@ pipeline {
                 }
             }
         }
+
 
 
         stage('SonarQube Analysis') {

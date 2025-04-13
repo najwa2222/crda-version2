@@ -1,12 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuites name="jest tests" tests="2" failures="0" errors="0" time="1.923">
-  <testsuite name="Health Check API" errors="0" failures="0" skipped="0" timestamp="2025-04-13T14:20:32" time="1.804" tests="2">
-    <testcase classname="Health Check API should return 200 OK" name="Health Check API should return 200 OK" time="0.14">
+<testsuites name="jest tests" tests="2" failures="0" errors="0" time="2.22">
+  <testsuite name="Health Check API" errors="0" failures="0" skipped="0" timestamp="2025-04-13T15:03:36" time="2.093" tests="2">
+    <testcase classname="Health Check API should return 200 OK" name="Health Check API should return 200 OK" time="0.13">
     </testcase>
-    <testcase classname="Health Check API should return 500 on DB failure" name="Health Check API should return 500 on DB failure" time="0.02">
-    </testcase>
-    <testcase classname=" Test execution failure: could be caused by test hooks like &apos;afterAll&apos;." name=" Test execution failure: could be caused by test hooks like &apos;afterAll&apos;." time="0">
-      <failure>{&quot;message&quot;:&quot;&quot;,&quot;stack&quot;:&quot;Error: listen EADDRINUSE: address already in use 0.0.0.0:4200\n    at Server.setupListenHandle [as _listen2] (node:net:1937:16)\n    at listenInCluster (node:net:1994:12)\n    at node:net:2203:7\n    at processTicksAndRejections (node:internal/process/task_queues:90:21)&quot;}</failure>
+    <testcase classname="Health Check API should return 500 on DB failure" name="Health Check API should return 500 on DB failure" time="0.025">
     </testcase>
   </testsuite>
 </testsuites>
