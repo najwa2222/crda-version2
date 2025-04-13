@@ -100,27 +100,33 @@ pipeline {
         }
 
         stage('Security Scan with Trivy') {
-            steps {
-                bat """
-                trivy image ^
-                --exit-code 1 ^
-                --severity ${TRIVY_SEVERITY} ^
-                --ignore-unfixed ^
-                --cache-dir ${TRIVY_CACHE_DIR} ^
-                --format template ^
-                --template "@C:\\trivy\\templates\\junit.tpl" ^
-                -o trivy-report.xml ^
-                ${DOCKER_IMAGE}:${DOCKER_TAG} || exit 0
-                """
-                script {
-                    if (fileExists('trivy-report.xml')) {
-                        junit 'trivy-report.xml'
-                    } else {
-                        echo 'No vulnerabilities found. Skipping JUnit report.'
+        steps {
+            bat """
+            trivy image ^
+            --exit-code 1 ^
+            --severity ${TRIVY_SEVERITY} ^
+            --ignore-unfixed ^
+            --cache-dir ${TRIVY_CACHE_DIR} ^
+            --format template ^
+            --template "@C:\\trivy\\templates\\junit.tpl" ^
+            -o trivy-report.xml ^
+            ${DOCKER_IMAGE}:${DOCKER_TAG} || exit 0
+            """
+            script {
+                def reportFile = 'trivy-report.xml'
+                // Ensure a valid JUnit report exists even if empty
+                if (!fileExists(reportFile)) {
+                    writeFile file: reportFile, text: '<testsuite name="Trivy" tests="0" failures="0"></testsuite>'
+                } else {
+                    def content = readFile(reportFile).trim()
+                    if (content.isEmpty()) {
+                        writeFile file: reportFile, text: '<testsuite name="Trivy" tests="0" failures="0"></testsuite>'
                     }
                 }
+                junit reportFile // Now always processes a valid report
             }
         }
+    }
 
         stage('Push to Docker Hub') {
             steps {
