@@ -162,26 +162,19 @@ const isDirecteur = createRoleCheck('directeur');
 
 app.get('/health', async (req, res) => {
   try {
-    let mysql;
-
-    if (process.env.NODE_ENV === 'test') {
-      const mock = await import('mysql2/promise');
-      mysql = mock.default || mock;
-    } else {
-      mysql = (await import('mysql2')).default;
-    }
-
+    const mysql = await import('mysql2/promise');
     const connection = await mysql.createConnection(process.env.DB_URL);
     await connection.query('SELECT 1');
     res.status(200).send('OK');
     await connection.end();
   } catch (err) {
     if (process.env.NODE_ENV !== 'test') {
-      console.error('Health check failed:', err.stack);
+      console.error('Health check failed:', err.message);
     }
     res.status(500).send('DB query failed');
   }
 });
+
 
 app.get('/health-pod', async (req, res) => {
   if (!globalThis.connection) {

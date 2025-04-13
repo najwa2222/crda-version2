@@ -27,9 +27,9 @@ spec:
         - name: MYSQL_PORT
           value: "3306"
         - name: MYSQL_DATABASE
-          value: "base_crda"  # Changed to match your schema
+          value: "base_crda"
         - name: MYSQL_USER
-          value: "crda_user"  # Changed to match user created in init script
+          value: "crda_user"
         - name: MYSQL_PASSWORD
           valueFrom:
             secretKeyRef:
