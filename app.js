@@ -162,10 +162,16 @@ const isDirecteur = createRoleCheck('directeur');
 
 app.get('/health', async (req, res) => {
   try {
-    const mysqlModule = await import('mysql2/promise');
-    const mysql = mysqlModule.default || mysqlModule;
-    const connection = await mysql.createConnection(process.env.DB_URL);
+    let mysql;
 
+    if (process.env.NODE_ENV === 'test') {
+      const mock = await import('mysql2/promise');
+      mysql = mock.default || mock;
+    } else {
+      mysql = (await import('mysql2')).default;
+    }
+
+    const connection = await mysql.createConnection(process.env.DB_URL);
     await connection.query('SELECT 1');
     res.status(200).send('OK');
     await connection.end();
