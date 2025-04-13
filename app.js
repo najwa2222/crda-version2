@@ -184,13 +184,13 @@ app.get('/health', async (req, res) => {
 });
 
 app.get('/health-pod', async (req, res) => {
-  if (!global.connection) {
+  if (!globalThis.connection) {
     return res.status(503).send('DB not connected yet');
   }
 
   try {
     // Attempt to query the DB to ensure it's healthy
-    await global.connection.query('SELECT 1');
+    await globalThis.connection.query('SELECT 1');
     res.status(200).send('OK');
   } catch (err) {
     // If DB connection fails
