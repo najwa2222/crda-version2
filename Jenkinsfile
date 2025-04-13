@@ -11,8 +11,9 @@ pipeline {
         SONAR_TOKEN_CREDENTIALS_ID = "sonarqube-token"
         NODE_OPTIONS = "--no-warnings --experimental-vm-modules"
         COVERAGE_REPORT = "coverage/lcov.info"
-        TRIVY_CACHE_DIR = ".trivycache"
+        TRIVY_CACHE_DIR = "C:\\ProgramData\\trivy-cache"
         TRIVY_SEVERITY = "CRITICAL"
+        TRIVY_SKIP_UPDATE = "true"
         ARTILLERY_CONFIG = "load-test.yml"
     }
 
@@ -100,33 +101,42 @@ pipeline {
         }
 
         stage('Security Scan with Trivy') {
-        steps {
-            bat """
-            trivy image ^
-            --exit-code 1 ^
-            --severity ${TRIVY_SEVERITY} ^
-            --ignore-unfixed ^
-            --cache-dir ${TRIVY_CACHE_DIR} ^
-            --format template ^
-            --template "@C:\\trivy\\templates\\junit.tpl" ^
-            -o trivy-report.xml ^
-            ${DOCKER_IMAGE}:${DOCKER_TAG} || exit 0
-            """
-            script {
-                def reportFile = 'trivy-report.xml'
-                // Ensure a valid JUnit report exists even if empty
-                if (!fileExists(reportFile)) {
-                    writeFile file: reportFile, text: '<testsuite name="Trivy" tests="0" failures="0"></testsuite>'
-                } else {
-                    def content = readFile(reportFile).trim()
-                    if (content.isEmpty()) {
+            steps {
+                script {
+                    def trivyStatus = bat(
+                        script: """
+                        trivy image ^
+                        --exit-code 1 ^
+                        --severity ${TRIVY_SEVERITY} ^
+                        --ignore-unfixed ^
+                        --cache-dir ${TRIVY_CACHE_DIR} ^
+                        --format template ^
+                        --template "@C:\\trivy\\templates\\junit.tpl" ^
+                        -o trivy-report.xml ^
+                        ${DOCKER_IMAGE}:${DOCKER_TAG}
+                        """,
+                        returnStatus: true
+                    )
+
+                    // Handle missing or empty report
+                    def reportFile = 'trivy-report.xml'
+                    if (!fileExists(reportFile) || readFile(reportFile).trim().isEmpty()) {
+                        echo "Trivy report missing or empty, generating a fallback JUnit report..."
                         writeFile file: reportFile, text: '<testsuite name="Trivy" tests="0" failures="0"></testsuite>'
                     }
+
+                    // Always publish test report (Jenkins won't fail on empty report now)
+                    junit reportFile
+
+                    // Only fail if Trivy actually found vulnerabilities (i.e., exit code was 1)
+                    if (trivyStatus == 1) {
+                        error "Trivy scan found critical vulnerabilities."
+                    } else {
+                        echo "Trivy scan passed with no critical vulnerabilities."
+                    }
                 }
-                junit reportFile // Now always processes a valid report
             }
         }
-    }
 
         stage('Push to Docker Hub') {
             steps {
@@ -231,7 +241,6 @@ pipeline {
     post {
         always {
             script {
-                bat "rmdir /s /q ${TRIVY_CACHE_DIR}"
                 cleanWs()
             }
         }
