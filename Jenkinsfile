@@ -13,7 +13,6 @@ pipeline {
         COVERAGE_REPORT = "coverage/lcov.info"
         TRIVY_CACHE_DIR = "C:\\ProgramData\\trivy-cache"
         TRIVY_SEVERITY = "CRITICAL"
-        TRIVY_SKIP_UPDATE = "true"
         ARTILLERY_CONFIG = "load-test.yml"
     }
 
@@ -103,40 +102,41 @@ pipeline {
         stage('Security Scan with Trivy') {
             steps {
                 script {
-                    def trivyStatus = bat(
-                        script: """
-                        trivy image ^
-                        --exit-code 1 ^
-                        --severity ${TRIVY_SEVERITY} ^
-                        --ignore-unfixed ^
-                        --cache-dir ${TRIVY_CACHE_DIR} ^
-                        --format template ^
-                        --template "@C:\\trivy\\templates\\junit.tpl" ^
-                        -o trivy-report.xml ^
-                        ${DOCKER_IMAGE}:${DOCKER_TAG}
-                        """,
-                        returnStatus: true
-                    )
+                    def trivyCmd = """
+                    trivy image ^
+                    --exit-code 1 ^
+                    --severity ${TRIVY_SEVERITY} ^
+                    --ignore-unfixed ^
+                    --cache-dir ${TRIVY_CACHE_DIR} ^
+                    --format template ^
+                    --template "@C:\\trivy\\templates\\junit.tpl" ^
+                    -o trivy-report.xml ^
+                    ${DOCKER_IMAGE}:${DOCKER_TAG}
+                    """
 
-                    // Handle missing or empty report
+                    def status = bat(script: trivyCmd, returnStatus: true)
+
+                    // Fallback if Trivy fails to generate the report
                     def reportFile = 'trivy-report.xml'
                     if (!fileExists(reportFile) || readFile(reportFile).trim().isEmpty()) {
-                        echo "Trivy report missing or empty, generating a fallback JUnit report..."
+                        echo "Trivy report missing or empty, generating fallback..."
                         writeFile file: reportFile, text: '<testsuite name="Trivy" tests="0" failures="0"></testsuite>'
                     }
 
-                    // Always publish test report (Jenkins won't fail on empty report now)
                     junit reportFile
 
-                    // Only fail if Trivy actually found vulnerabilities (i.e., exit code was 1)
-                    if (trivyStatus == 1) {
-                        error "Trivy scan found critical vulnerabilities."
+                    // Fail build only if Trivy found critical issues (status = 1)
+                    if (status == 1) {
+                        error "Trivy found CRITICAL vulnerabilities."
+                    } else if (status != 0) {
+                        echo "Trivy failed, but not due to CRITICAL vulnerabilities. Status: ${status}"
                     } else {
-                        echo "Trivy scan passed with no critical vulnerabilities."
+                        echo "Trivy scan passed with no critical issues."
                     }
                 }
             }
         }
+
 
         stage('Push to Docker Hub') {
             steps {
