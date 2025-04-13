@@ -67,7 +67,7 @@ pipeline {
                     } else {
                         bat 'npm test -- --ci --coverage --reporters=default --reporters=jest-junit'
                     }
-                    junit 'test-results/**/*.xml'
+                    junit 'reports/junit.xml'
                     publishCoverage adapters: [istanbulCoberturaAdapter('coverage/cobertura-coverage.xml')]
                 }
             }
