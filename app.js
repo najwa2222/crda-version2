@@ -178,10 +178,14 @@ app.get('/health', async (req, res) => {
 
 app.get('/health-pod', async (req, res) => {
   try {
-    // Check if DB connection is ready by performing a query
     const mysql = await import('mysql2/promise');
-    const connection = await mysql.createConnection(process.env.DB_URL);
-    await connection.query('SELECT 1');
+    const connection = await mysql.createConnection({
+      host: process.env.MYSQL_HOST,
+      user: process.env.MYSQL_USER,
+      password: process.env.MYSQL_PASSWORD,
+      database: process.env.MYSQL_DATABASE
+    });
+    await connection.query('SELECT 1'); // Simple query to check DB connectivity
     await connection.end();
     res.status(200).send('OK');
   } catch (err) {
@@ -189,7 +193,6 @@ app.get('/health-pod', async (req, res) => {
     res.status(500).send('DB query failed');
   }
 });
-
 
 // Home and About pages
 app.get('/', (req, res) => res.render('index', { title: 'Home', layout: 'main' }));
