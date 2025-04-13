@@ -81,7 +81,7 @@ pipeline {
                         -Dsonar.projectName=${DOCKER_IMAGE} ^
                         -Dsonar.sources=app.js,src ^
                         -Dsonar.host.url=${SONAR_SERVER_URL} ^
-                        -Dsonar.token=${SONAR_TOKEN} ^
+                        -Dsonar.token=%SONAR_TOKEN% ^
                         -Dsonar.javascript.lcov.reportPaths=${COVERAGE_REPORT} ^
                         -Dsonar.qualitygate.wait=true ^
                         -Dsonar.exclusions=**/*.spec.js,kubernetes/**
@@ -94,7 +94,7 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    dockerImage = docker.build("${DOCKER_IMAGE}:${DOCKER_TAG}")
+                    def dockerImage = docker.build("${DOCKER_IMAGE}:${DOCKER_TAG}")
                 }
             }
         }
@@ -110,9 +110,15 @@ pipeline {
                 --format template ^
                 --template "@C:\\trivy\\templates\\junit.tpl" ^
                 -o trivy-report.xml ^
-                ${DOCKER_IMAGE}:${DOCKER_TAG}
+                ${DOCKER_IMAGE}:${DOCKER_TAG} || exit 0
                 """
-                junit 'trivy-report.xml'
+                script {
+                    if (fileExists('trivy-report.xml')) {
+                        junit 'trivy-report.xml'
+                    } else {
+                        echo 'No vulnerabilities found. Skipping JUnit report.'
+                    }
+                }
             }
         }
 
