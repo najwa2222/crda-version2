@@ -177,20 +177,19 @@ app.get('/health', async (req, res) => {
 
 
 app.get('/health-pod', async (req, res) => {
-  if (!globalThis.connection) {
-    return res.status(503).send('DB not connected yet');
-  }
-
   try {
-    // Attempt to query the DB to ensure it's healthy
-    await globalThis.connection.query('SELECT 1');
+    // Check if DB connection is ready by performing a query
+    const mysql = await import('mysql2/promise');
+    const connection = await mysql.createConnection(process.env.DB_URL);
+    await connection.query('SELECT 1');
+    await connection.end();
     res.status(200).send('OK');
   } catch (err) {
-    // If DB connection fails
     console.error('Health check failed:', err.message);
     res.status(500).send('DB query failed');
   }
 });
+
 
 // Home and About pages
 app.get('/', (req, res) => res.render('index', { title: 'Home', layout: 'main' }));
