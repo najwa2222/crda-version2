@@ -183,6 +183,18 @@ app.get('/health', async (req, res) => {
   }
 });
 
+app.get('/health-pod', async (req, res) => {
+  try {
+    const mysql = (await import('mysql2')).default;  // Use mysql2 directly for the pod
+    const connection = await mysql.createConnection(process.env.DB_URL);
+    await connection.query('SELECT 1');
+    res.status(200).send('OK');
+    await connection.end();
+  } catch (err) {
+    console.error('Pod health check failed:', err.stack);
+    res.status(500).send('DB query failed');
+  }
+});
 
 // Home and About pages
 app.get('/', (req, res) => res.render('index', { title: 'Home', layout: 'main' }));
