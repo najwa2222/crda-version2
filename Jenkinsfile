@@ -40,10 +40,12 @@ pipeline {
                 bat 'npm audit --production --audit-level=critical'
             }
         }
-        
+
         stage('Run Tests') {
             environment {
                 NODE_ENV = "test"
+                JEST_JUNIT_OUTPUT_DIR = "./reports/"
+                JEST_JUNIT_OUTPUT_NAME = "junit.xml"
             }
             steps {
                 // Create reports directory
@@ -51,8 +53,6 @@ pipeline {
                 
                 // Run tests with better error handling
                 bat '''
-                    set JEST_JUNIT_OUTPUT_DIR=./reports/
-                    set JEST_JUNIT_OUTPUT_NAME=junit.xml
                     npm test -- --ci --reporters=default --reporters=jest-junit --no-watchman --detectOpenHandles --forceExit --testTimeout=10000 > jest-output.log 2>&1 || echo "Tests completed with status: %errorlevel%"
                 '''
                 
@@ -78,17 +78,16 @@ pipeline {
                         }
                     } catch (Exception e) {
                         echo "Error processing coverage results: ${e.message}"
-                        // Continue anyway
                     }
                 }
             }
             post {
                 always {
-                    // Use safer cleanup with better error handling
+                    // Safe cleanup with proper error handling and output suppression
                     bat '''
                         taskkill /F /IM node.exe /T >nul 2>&1 || echo No node processes to kill
                         taskkill /F /IM npm.cmd /T >nul 2>&1 || echo No npm processes to kill
-                        exit 0
+                        exit /b 0
                     '''
                     
                     // Archive test outputs for debugging
