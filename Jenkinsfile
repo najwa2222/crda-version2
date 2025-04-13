@@ -64,14 +64,18 @@ pipeline {
                 script {
                     if (isUnix()) {
                         sh 'npm test -- --ci --coverage --reporters=default --reporters=jest-junit'
+                        sh 'mkdir -p reports && mv -f junit.xml reports/junit.xml'
                     } else {
                         bat 'npm test -- --ci --coverage --reporters=default --reporters=jest-junit'
+                        bat 'if not exist reports mkdir reports'
+                        bat 'move /Y junit.xml reports\\junit.xml'
                     }
                     junit 'reports/junit.xml'
                     publishCoverage adapters: [istanbulCoberturaAdapter('coverage/cobertura-coverage.xml')]
                 }
             }
         }
+
 
         stage('SonarQube Analysis') {
             steps {

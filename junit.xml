@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="jest tests" tests="2" failures="0" errors="0" time="2.124">
+  <testsuite name="Health Check API" errors="0" failures="0" skipped="0" timestamp="2025-04-13T00:37:17" time="2" tests="2">
+    <testcase classname="Health Check API should return 200 OK" name="Health Check API should return 200 OK" time="0.185">
+    </testcase>
+    <testcase classname="Health Check API should return 500 on DB failure" name="Health Check API should return 500 on DB failure" time="0.024">
+    </testcase>
+  </testsuite>
+</testsuites>
