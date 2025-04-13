@@ -30,28 +30,14 @@ pipeline {
 
         stage('Install Dependencies') {
             steps {
-                script {
-                    // Directly install without caching the node_modules folder.
-                    if (isUnix()) {
-                        sh 'npm ci --prefer-offline --no-audit --no-fund'
-                    } else {
-                        bat 'npm ci --prefer-offline --no-audit --no-fund'
-                    }
-                }
+                bat 'npm ci --prefer-offline --no-audit --no-fund'
             }
         }
 
         stage('Static Code Analysis') {
             steps {
-                script {
-                    if (isUnix()) {
-                        sh 'npm run lint -- --config eslint.config.js'
-                        sh 'npm audit --production --audit-level=critical'
-                    } else {
-                        bat 'npm run lint -- --config eslint.config.js'
-                        bat 'npm audit --production --audit-level=critical'
-                    }
-                }
+                bat 'npm run lint -- --config eslint.config.js'
+                bat 'npm audit --production --audit-level=critical'
             }
         }
 
@@ -61,64 +47,35 @@ pipeline {
                 NODE_ENV = "test"
             }
             steps {
-                script {
-                    if (isUnix()) {
-                        sh '''npm test -- --ci --coverage --reporters=default --reporters=jest-junit --testTimeout=30000 1>jest-output.log
-                            mkdir -p reports && mv -f junit.xml reports/junit.xml'''
-                    } else {
-                        bat '''npm test -- --ci --coverage --reporters=default --reporters=jest-junit --testTimeout=30000 1>jest-output.log
-                            if not exist reports mkdir reports
-                            move /Y junit.xml reports\\junit.xml'''
-                    }
-                    junit 'reports/junit.xml'
-                    publishCoverage adapters: [istanbulCoberturaAdapter('coverage/cobertura-coverage.xml')]
-                }
+                bat 'npm test -- --ci --coverage --reporters=default --reporters=jest-junit --testTimeout=30000 1>jest-output.log'
+                bat 'if not exist reports mkdir reports'
+                bat 'move /Y junit.xml reports\\junit.xml'
+                junit 'reports/junit.xml'
+                publishCoverage adapters: [istanbulCoberturaAdapter('coverage/cobertura-coverage.xml')]
             }
             post {
                 always {
-                    // Forcefully terminate any hanging Node processes
-                    if (isUnix()) {
-                        sh 'killall node || true'
-                    } else {
-                        bat 'taskkill /F /IM node.exe || true'
-                    }
+                    bat 'taskkill /F /IM node.exe || true'
                     cleanWs()  // Clean up the workspace
                 }
             }
         }
 
-
         stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv('SonarQube') {
                     withCredentials([string(credentialsId: SONAR_TOKEN_CREDENTIALS_ID, variable: 'SONAR_TOKEN')]) {
-                        script {
-                            if (isUnix()) {
-                                sh """
-                                sonar-scanner \
-                                -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
-                                -Dsonar.projectName=${DOCKER_IMAGE} \
-                                -Dsonar.sources=app.js,src \
-                                -Dsonar.host.url=${SONAR_SERVER_URL} \
-                                -Dsonar.token=${SONAR_TOKEN} \
-                                -Dsonar.javascript.lcov.reportPaths=${COVERAGE_REPORT} \
-                                -Dsonar.qualitygate.wait=true \
-                                -Dsonar.exclusions=**/*.spec.js,kubernetes/**
-                                """
-                            } else {
-                                bat """
-                                sonar-scanner.bat ^
-                                -Dsonar.projectKey=${SONAR_PROJECT_KEY} ^
-                                -Dsonar.projectName=${DOCKER_IMAGE} ^
-                                -Dsonar.sources=app.js,src ^
-                                -Dsonar.host.url=${SONAR_SERVER_URL} ^
-                                -Dsonar.token=${SONAR_TOKEN} ^
-                                -Dsonar.javascript.lcov.reportPaths=${COVERAGE_REPORT} ^
-                                -Dsonar.qualitygate.wait=true ^
-                                -Dsonar.exclusions=**/*.spec.js,kubernetes/**
-                                """
-                            }
-                        }
+                        bat """
+                        sonar-scanner.bat ^
+                        -Dsonar.projectKey=${SONAR_PROJECT_KEY} ^
+                        -Dsonar.projectName=${DOCKER_IMAGE} ^
+                        -Dsonar.sources=app.js,src ^
+                        -Dsonar.host.url=${SONAR_SERVER_URL} ^
+                        -Dsonar.token=${SONAR_TOKEN} ^
+                        -Dsonar.javascript.lcov.reportPaths=${COVERAGE_REPORT} ^
+                        -Dsonar.qualitygate.wait=true ^
+                        -Dsonar.exclusions=**/*.spec.js,kubernetes/**
+                        """
                     }
                 }
             }
@@ -134,34 +91,18 @@ pipeline {
 
         stage('Security Scan with Trivy') {
             steps {
-                script {
-                    if (isUnix()) {
-                        sh """
-                        trivy image \
-                        --exit-code 1 \
-                        --severity ${TRIVY_SEVERITY} \
-                        --ignore-unfixed \
-                        --cache-dir ${TRIVY_CACHE_DIR} \
-                        --format template \
-                        --template "@/usr/local/share/trivy/templates/junit.tpl" \
-                        -o trivy-report.xml \
-                        ${DOCKER_IMAGE}:${DOCKER_TAG}
-                        """
-                    } else {
-                        bat """
-                        trivy image ^
-                        --exit-code 1 ^
-                        --severity ${TRIVY_SEVERITY} ^
-                        --ignore-unfixed ^
-                        --cache-dir ${TRIVY_CACHE_DIR} ^
-                        --format template ^
-                        --template "@C:\\trivy\\templates\\junit.tpl" ^
-                        -o trivy-report.xml ^
-                        ${DOCKER_IMAGE}:${DOCKER_TAG}
-                        """
-                    }
-                    junit 'trivy-report.xml'
-                }
+                bat """
+                trivy image ^
+                --exit-code 1 ^
+                --severity ${TRIVY_SEVERITY} ^
+                --ignore-unfixed ^
+                --cache-dir ${TRIVY_CACHE_DIR} ^
+                --format template ^
+                --template "@C:\\trivy\\templates\\junit.tpl" ^
+                -o trivy-report.xml ^
+                ${DOCKER_IMAGE}:${DOCKER_TAG}
+                """
+                junit 'trivy-report.xml'
             }
         }
 
@@ -186,33 +127,19 @@ pipeline {
             steps {
                 script {
                     try {
-                        if (isUnix()) {
-                            sh "kubectl create namespace ${KUBE_NAMESPACE} --dry-run=client -o yaml | kubectl apply -f -"
-                        } else {
-                            bat "kubectl create namespace ${KUBE_NAMESPACE} --dry-run=client -o yaml | kubectl apply -f -"
-                        }
+                        bat "kubectl create namespace ${KUBE_NAMESPACE} --dry-run=client -o yaml | kubectl apply -f -"
 
-                        withCredentials([
+                        withCredentials([ 
                             string(credentialsId: 'mysql-root-password', variable: 'MYSQL_ROOT_PASSWORD'),
                             string(credentialsId: 'mysql-app-password', variable: 'MYSQL_APP_PASSWORD')
                         ]) {
-                            if (isUnix()) {
-                                sh """
-                                kubectl create secret generic ${MYSQL_SECRET} \
-                                    --namespace ${KUBE_NAMESPACE} \
-                                    --from-literal=root-password=${MYSQL_ROOT_PASSWORD} \
-                                    --from-literal=app-password=${MYSQL_APP_PASSWORD} \
-                                    --dry-run=client -o yaml | kubectl apply -f -
-                                """
-                            } else {
-                                bat """
-                                kubectl create secret generic ${MYSQL_SECRET} ^
-                                    --namespace ${KUBE_NAMESPACE} ^
-                                    --from-literal=root-password=%MYSQL_ROOT_PASSWORD% ^
-                                    --from-literal=app-password=%MYSQL_APP_PASSWORD% ^
-                                    --dry-run=client -o yaml | kubectl apply -f -
-                                """
-                            }
+                            bat """
+                            kubectl create secret generic ${MYSQL_SECRET} ^
+                                --namespace ${KUBE_NAMESPACE} ^
+                                --from-literal=root-password=%MYSQL_ROOT_PASSWORD% ^
+                                --from-literal=app-password=%MYSQL_APP_PASSWORD% ^
+                                --dry-run=client -o yaml | kubectl apply -f -
+                            """
                         }
 
                         dir('kubernetes') {
@@ -230,10 +157,7 @@ pipeline {
 
                             manifestOrder.each { file ->
                                 if (file == '02-mysql-pv.yaml') {
-                                    def checkPV = isUnix() ? 
-                                        sh(script: "kubectl get pv mysql-pv", returnStatus: true) :
-                                        bat(script: "kubectl get pv mysql-pv", returnStatus: true)
-                                    
+                                    def checkPV = bat(script: "kubectl get pv mysql-pv", returnStatus: true)
                                     if (checkPV != 0) {
                                         kubectlApply(file)
                                     } else {
@@ -244,7 +168,7 @@ pipeline {
                                 }
 
                                 if (file =~ /deployment.yaml$/) {
-                                    def resourceType = file.contains('mysql') ? 
+                                    def resourceType = file.contains('mysql') ?
                                         'deployment/mysql-deployment' : 'deployment/app-deployment'
                                     kubectlRolloutStatus(resourceType)
                                 }
@@ -259,49 +183,25 @@ pipeline {
 
         stage('Rotate Secrets') {
             steps {
-                script {
-                    if (isUnix()) {
-                        sh """
-                        kubectl rollout restart deployment/mysql-deployment -n ${KUBE_NAMESPACE}
-                        kubectl rollout restart deployment/app-deployment -n ${KUBE_NAMESPACE}
-                        """
-                    } else {
-                        bat """
-                        kubectl rollout restart deployment/mysql-deployment -n ${KUBE_NAMESPACE}
-                        kubectl rollout restart deployment/app-deployment -n ${KUBE_NAMESPACE}
-                        """
-                    }
-                }
+                bat """
+                kubectl rollout restart deployment/mysql-deployment -n ${KUBE_NAMESPACE}
+                kubectl rollout restart deployment/app-deployment -n ${KUBE_NAMESPACE}
+                """
             }
         }
 
         stage('Verify Deployment') {
             steps {
-                script {
-                    if (isUnix()) {
-                        sh """
-                        kubectl get pods,svc,deployments --namespace ${KUBE_NAMESPACE}
-                        kubectl rollout status deployment/app-deployment --namespace ${KUBE_NAMESPACE} --timeout=120s
-                        """
-                    } else {
-                        bat """
-                        kubectl get pods,svc,deployments --namespace ${KUBE_NAMESPACE}
-                        kubectl rollout status deployment/app-deployment --namespace ${KUBE_NAMESPACE} --timeout=120s
-                        """
-                    }
-                }
+                bat """
+                kubectl get pods,svc,deployments --namespace ${KUBE_NAMESPACE}
+                kubectl rollout status deployment/app-deployment --namespace ${KUBE_NAMESPACE} --timeout=120s
+                """
             }
         }
 
         stage('Performance Test') {
             steps {
-                script {
-                    if (isUnix()) {
-                        sh "artillery run ${ARTILLERY_CONFIG}"
-                    } else {
-                        bat "artillery run ${ARTILLERY_CONFIG}"
-                    }
-                }
+                bat "artillery run ${ARTILLERY_CONFIG}"
             }
         }
     }
@@ -309,11 +209,7 @@ pipeline {
     post {
         always {
             script {
-                if (isUnix()) {
-                    sh "rm -rf ${TRIVY_CACHE_DIR}"
-                } else {
-                    bat "rmdir /s /q ${TRIVY_CACHE_DIR}"
-                }
+                bat "rmdir /s /q ${TRIVY_CACHE_DIR}"
                 cleanWs()
             }
         }
@@ -341,19 +237,10 @@ pipeline {
     }
 }
 
-// Shared functions
 def kubectlApply(String file) {
-    if (isUnix()) {
-        sh "kubectl apply -f ${file} --namespace ${KUBE_NAMESPACE}"
-    } else {
-        bat "kubectl apply -f ${file} --namespace ${KUBE_NAMESPACE}"
-    }
+    bat "kubectl apply -f ${file} --namespace ${KUBE_NAMESPACE}"
 }
 
 def kubectlRolloutStatus(String resourceType) {
-    if (isUnix()) {
-        sh "kubectl rollout status ${resourceType} --namespace ${KUBE_NAMESPACE} --timeout=300s"
-    } else {
-        bat "kubectl rollout status ${resourceType} --namespace ${KUBE_NAMESPACE} --timeout=300s"
-    }
+    bat "kubectl rollout status ${resourceType} --namespace ${KUBE_NAMESPACE} --timeout=300s"
 }
