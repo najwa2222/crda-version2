@@ -94,10 +94,12 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    def dockerImage = docker.build("${DOCKER_IMAGE}:${DOCKER_TAG}")
+                    // Declare dockerImage here for global scope access
+                    dockerImage = docker.build("${DOCKER_IMAGE}:${DOCKER_TAG}")
                 }
             }
         }
+
 
         stage('Security Scan with Trivy') {
             steps {
@@ -151,6 +153,7 @@ pipeline {
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
                     script {
+                        // Push docker image to Docker Hub
                         docker.withRegistry('', 'dockerhub-credentials') {
                             dockerImage.push()
                             dockerImage.push('latest')
@@ -159,6 +162,7 @@ pipeline {
                 }
             }
         }
+
 
         stage('Deploy to Kubernetes') {
             steps {
