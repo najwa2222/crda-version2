@@ -43,13 +43,16 @@ pipeline {
 
         stage('Run Tests') {
             environment {
-                JEST_JUNIT_OUTPUT = "test-results/jest/results.xml"
+                JEST_JUNIT_OUTPUT = "junit.xml"  // Set to match what's actually happening
                 NODE_ENV = "test"
             }
             steps {
                 bat 'npm test -- --ci --coverage --reporters=default --reporters=jest-junit --testTimeout=30000 1>jest-output.log'
                 bat 'if not exist reports mkdir reports'
+                
+                // Move the file from root to reports directory
                 bat 'move /Y junit.xml reports\\junit.xml'
+                
                 junit 'reports/junit.xml'
                 publishCoverage adapters: [istanbulCoberturaAdapter('coverage/cobertura-coverage.xml')]
             }
