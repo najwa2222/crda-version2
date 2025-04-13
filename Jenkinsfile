@@ -52,7 +52,7 @@ pipeline {
                 bat 'echo "Creating reports directory" && if not exist reports mkdir reports'
                 bat '''
                     echo "Starting tests..."
-                    npm test -- --ci --reporters=default --reporters=jest-junit --no-watchman --forceExit --testTimeout=30000
+                    npm test
                     echo "Tests command finished"
                 '''
                 // Other steps follow...
