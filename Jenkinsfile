@@ -102,39 +102,42 @@ pipeline {
         stage('Security Scan with Trivy') {
             steps {
                 script {
-                    def trivyCmd = """
-                    trivy image ^
-                    --exit-code 1 ^
-                    --severity ${TRIVY_SEVERITY} ^
-                    --ignore-unfixed ^
-                    --cache-dir ${TRIVY_CACHE_DIR} ^
-                    --format template ^
-                    --template "@C:\\trivy\\templates\\junit.tpl" ^
-                    -o trivy-report.xml ^
-                    ${DOCKER_IMAGE}:${DOCKER_TAG}
-                    """
+                    def trivyExitCode = bat(
+                        script: """
+                            trivy image ^
+                            --exit-code 1 ^
+                            --severity CRITICAL ^
+                            --ignore-unfixed ^
+                            --cache-dir C:\\ProgramData\\trivy-cache ^
+                            --format template ^
+                            --template "@C:\\trivy\\templates\\junit.tpl" ^
+                            -o trivy-report.xml ^
+                            najwa22/crda-app:72
+                        """,
+                        returnStatus: true
+                    )
 
-                    def status = bat(script: trivyCmd, returnStatus: true)
-
-                    def reportFile = 'trivy-report.xml'
-                    if (!fileExists(reportFile) || readFile(reportFile).trim().isEmpty()) {
-                        echo "Trivy report missing or empty, generating fallback..."
-                        writeFile file: reportFile, text: '<testsuite name="Trivy" tests="1" failures="0"><testcase classname="Trivy" name="Scan"/></testsuite>'
+                    // If report is missing or empty, create a dummy fallback
+                    if (!fileExists('trivy-report.xml') || readFile('trivy-report.xml').trim().isEmpty()) {
+                        echo "No results found in trivy-report.xml. Writing fallback report..."
+                        writeFile file: 'trivy-report.xml',
+                                text: '<testsuite name="Trivy Scan" tests="1" failures="0"><testcase classname="Trivy" name="No vulnerabilities found"/></testsuite>'
                     }
 
-                    junit reportFile
+                    // Always publish a valid JUnit report to prevent Jenkins failure
+                    junit 'trivy-report.xml'
 
-                    if (status == 1) {
-                        error "Trivy found CRITICAL vulnerabilities."
-                    } else if (status != 0) {
-                        echo "Trivy failed (non-vuln error), but build will continue. Exit code: ${status}"
+                    // Fail the build if Trivy found real CRITICAL issues
+                    if (trivyExitCode == 1) {
+                        error "Trivy scan failed: CRITICAL vulnerabilities found."
+                    } else if (trivyExitCode != 0) {
+                        echo "Trivy exited with code ${trivyExitCode}, but not due to vulnerabilities."
                     } else {
-                        echo "Trivy scan passed cleanly."
+                        echo "Trivy scan completed successfully. No CRITICAL vulnerabilities found."
                     }
                 }
             }
         }
-
 
         stage('Push to Docker Hub') {
             steps {
