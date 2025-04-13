@@ -29,19 +29,19 @@ export default [
   {
     languageOptions: {
       globals: {
-        module: 'readonly',
+        module: 'readonly',  // ✅ Make module available for config files
         require: 'readonly',
         jest: 'readonly',
         describe: 'readonly',
         beforeEach: 'readonly',
-        afterEach: 'readonly',  // ✅ Added
+        afterEach: 'readonly',
         beforeAll: 'readonly',
-        afterAll: 'readonly',   // ✅ Added
+        afterAll: 'readonly',
         it: 'readonly',
         expect: 'readonly',
       },
     },
-    files: ['**/__tests__/**/*.js', '**/*.test.js', '**/jest/**/*.js'], // ✅ You had setup.js here
+    files: ['**/__tests__/**/*.js', '**/*.test.js', '**/jest/**/*.js', 'jest-junit.config.js'], // ✅ Explicitly include the jest-junit config file
     plugins: {
       jest: eslintPluginJest,
     },
