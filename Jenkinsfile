@@ -48,27 +48,21 @@ pipeline {
                 JEST_JUNIT_OUTPUT_NAME = "junit.xml"
             }
             steps {
-                // Create reports directory
-                bat 'if not exist reports mkdir reports'
-                
-                // Run tests with better error handling
+                bat 'echo "Creating reports directory" && if not exist reports mkdir reports'
                 bat '''
+                    echo "Starting tests..."
                     npm test -- --ci --reporters=default --reporters=jest-junit --no-watchman --detectOpenHandles --forceExit --testTimeout=10000 > jest-output.log 2>&1 || echo "Tests completed with status: %errorlevel%"
+                    echo "Tests command finished"
                 '''
-                
-                // Generate coverage reports if possible
                 bat '''
+                    echo "Checking for coverage directory..."
                     if exist coverage (
                         npx istanbul report --root ./coverage --dir ./coverage cobertura || echo "Coverage report generation completed with status: %errorlevel%"
                     ) else (
                         echo "No coverage directory found. Skipping coverage report generation."
                     )
                 '''
-                
-                // Process test results
                 junit allowEmptyResults: true, testResults: 'reports/junit.xml'
-                
-                // Try to publish coverage if it exists
                 script {
                     try {
                         if (fileExists('coverage/cobertura-coverage.xml')) {
@@ -83,18 +77,16 @@ pipeline {
             }
             post {
                 always {
-                    // Safe cleanup with proper error handling and output suppression
                     bat '''
                         taskkill /F /IM node.exe /T >nul 2>&1 || echo No node processes to kill
                         taskkill /F /IM npm.cmd /T >nul 2>&1 || echo No npm processes to kill
                         exit /b 0
                     '''
-                    
-                    // Archive test outputs for debugging
                     archiveArtifacts artifacts: 'jest-output.log,reports/**,coverage/**', allowEmptyArchive: true
                 }
             }
         }
+
 
         stage('SonarQube Analysis') {
             steps {
