@@ -43,27 +43,28 @@ pipeline {
 
         stage('Run Tests') {
             environment {
-                JEST_JUNIT_OUTPUT = "junit.xml"
                 NODE_ENV = "test"
             }
             steps {
-                bat 'npm test -- --ci --coverage --reporters=default --reporters=jest-junit --testTimeout=30000 1>jest-output.log'
-                
-                // Debug steps to see what's happening
-                bat 'dir'  // List all files in current directory
-                
+                // Create reports directory first since Jest will try to write there
                 bat 'if not exist reports mkdir reports'
                 
-                // Check if junit.xml exists before trying to move it
-                bat 'if exist junit.xml (move /Y junit.xml reports\\junit.xml) else (echo junit.xml not found)'
+                // Run tests
+                bat 'npm test -- --ci --coverage --reporters=default --reporters=jest-junit --testTimeout=30000 1>jest-output.log'
                 
-                // Use try-catch in case the junit.xml file doesn't exist
+                // Debug to see what files we have
+                bat 'dir'
+                bat 'dir reports'
+                
+                // Use the correct path based on jest-junit.config.cjs
+                junit allowEmptyResults: true, testResults: 'reports/junit.xml'
+                
+                // Try to publish coverage if it exists
                 script {
                     try {
-                        junit allowEmptyResults: true, testResults: 'reports/junit.xml'
                         publishCoverage adapters: [istanbulCoberturaAdapter('coverage/cobertura-coverage.xml')]
                     } catch (Exception e) {
-                        echo "Error processing test results: ${e.message}"
+                        echo "Error processing coverage results: ${e.message}"
                     }
                 }
             }
