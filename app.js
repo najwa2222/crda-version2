@@ -177,19 +177,14 @@ app.get('/health', async (req, res) => {
 
 
 app.get('/health-pod', async (req, res) => {
+  if (!connection) {
+    return res.status(503).send('DB not connected yet');
+  }
   try {
-    const mysql = await import('mysql2/promise');
-    const connection = await mysql.createConnection({
-      host: process.env.MYSQL_HOST,
-      user: process.env.MYSQL_USER,
-      password: process.env.MYSQL_PASSWORD,
-      database: process.env.MYSQL_DATABASE
-    });
-    await connection.query('SELECT 1'); // Simple query to check DB connectivity
-    await connection.end();
+    await connection.query('SELECT 1');
     res.status(200).send('OK');
   } catch (err) {
-    console.error('Health check failed:', err.message);
+    console.error('Health check failed:', err.message);    console.error('Health check failed:', err.message);
     res.status(500).send('DB query failed');
   }
 });
