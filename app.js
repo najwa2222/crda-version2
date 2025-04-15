@@ -17,6 +17,9 @@ dotenv.config();
 
 const app = express();
 
+// Apply metrics middleware to track all requests
+app.use(metricsMiddleware);
+
 // Environment and configuration settings
 const PORT = process.env.PORT || 4200;
 const NODE_ENV = process.env.NODE_ENV || 'development';
@@ -190,6 +193,20 @@ app.get('/health-pod', async (req, res) => {
     res.status(500).send('DB query failed');
   }
 });
+
+
+// metrics endpoint
+app.get('/metrics', async (req, res) => {
+  try {
+    res.set('Content-Type', registry.contentType);
+    const metrics = await registry.metrics();
+    res.end(metrics);
+  } catch (err) {
+    console.error('Error generating metrics:', err);
+    res.status(500).end();
+  }
+});
+
 
 // Home and About pages
 app.get('/', (req, res) => res.render('index', { title: 'Home', layout: 'main' }));
@@ -813,15 +830,6 @@ app.use((req, res) => {
     error: { status: 404 },
     status: 404
   });
-});
-
-// Apply metrics middleware to track all requests
-app.use(metricsMiddleware);
-
-// metrics endpoint
-app.get('/metrics', async (req, res) => {
-  res.set('Content-Type', registry.contentType);
-  res.end(await registry.metrics());
 });
 
 // --- Server Initialization ---

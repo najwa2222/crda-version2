@@ -37,10 +37,10 @@ data:
       
       - job_name: 'crda-app'
         static_configs:
-        - targets: ['app-service:80']
+        - targets: ['app-service.crda-namespace.svc.cluster.local:4200']
       
       - job_name: 'mysql'
         static_configs:
-        - targets: ['mysql-service:3306']
+        - targets: ['mysql-service.crda-namespace.svc.cluster.local:3306']
           labels:
-            service: 'mysql'  
+            service: 'mysql'

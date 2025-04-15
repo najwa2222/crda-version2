@@ -196,9 +196,10 @@ pipeline {
                                 '08-app-deployment.yaml',
                                 '09-app-service.yaml',
                                 '10-prometheus-config.yaml',
-                                '11-prometheus-deployment.yaml',
-                                '12-grafana-deployment.yaml',
-                                '14-mysql-exporter.yaml'
+                                '11-Prometheus-RBAC.yaml',
+                                '12-prometheus-deployment.yaml',
+                                '13-grafana-deployment.yaml',
+                                '15-mysql-exporter.yaml'
                             ]
 
                             manifestOrder.each { file ->
