@@ -13,7 +13,6 @@ pipeline {
         COVERAGE_REPORT = "coverage/lcov.info"
         TRIVY_CACHE_DIR = "C:\\ProgramData\\trivy-cache"
         TRIVY_SEVERITY = "CRITICAL"
-        ARTILLERY_CONFIG = "load-test.yml"
     }
 
     options {
@@ -69,8 +68,6 @@ pipeline {
             }
         }
 
-
-
         stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv('SonarQube') {
@@ -99,7 +96,6 @@ pipeline {
                 }
             }
         }
-
 
         stage('Security Scan with Trivy') {
             steps {
@@ -163,7 +159,6 @@ pipeline {
             }
         }
 
-
         stage('Deploy to Kubernetes') {
             steps {
                 script {
@@ -172,13 +167,19 @@ pipeline {
 
                         withCredentials([ 
                             string(credentialsId: 'mysql-root-password', variable: 'MYSQL_ROOT_PASSWORD'),
-                            string(credentialsId: 'mysql-app-password', variable: 'MYSQL_APP_PASSWORD')
+                            string(credentialsId: 'mysql-app-password', variable: 'MYSQL_APP_PASSWORD'),
+                            string(credentialsId: 'grafana-admin-password', variable: 'GRAFANA_ADMIN_PASSWORD')
                         ]) {
                             bat """
                             kubectl create secret generic ${MYSQL_SECRET} ^
                                 --namespace ${KUBE_NAMESPACE} ^
                                 --from-literal=root-password=%MYSQL_ROOT_PASSWORD% ^
                                 --from-literal=app-password=%MYSQL_APP_PASSWORD% ^
+                                --dry-run=client -o yaml | kubectl apply -f -
+                            
+                            kubectl create secret generic grafana-secret ^
+                                --namespace ${KUBE_NAMESPACE} ^
+                                --from-literal=admin-password=%GRAFANA_ADMIN_PASSWORD% ^
                                 --dry-run=client -o yaml | kubectl apply -f -
                             """
                         }
@@ -193,7 +194,11 @@ pipeline {
                                 '06-mysql-deployment.yaml',
                                 '07-mysql-service.yaml',
                                 '08-app-deployment.yaml',
-                                '09-app-service.yaml'
+                                '09-app-service.yaml',
+                                '10-prometheus-config.yaml',
+                                '11-prometheus-deployment.yaml',
+                                '12-grafana-deployment.yaml',
+                                '14-mysql-exporter.yaml'
                             ]
 
                             manifestOrder.each { file ->
@@ -210,7 +215,12 @@ pipeline {
 
                                 if (file =~ /deployment.yaml$/) {
                                     def resourceType = file.contains('mysql') ?
-                                        'deployment/mysql-deployment' : 'deployment/app-deployment'
+                                        'deployment/mysql-deployment' : 
+                                        file.contains('prometheus') ?
+                                        'deployment/prometheus-deployment' :
+                                        file.contains('grafana') ?
+                                        'deployment/grafana-deployment' :
+                                        'deployment/app-deployment'
                                     kubectlRolloutStatus(resourceType)
                                 }
                             }

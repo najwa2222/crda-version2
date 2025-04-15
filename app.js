@@ -7,6 +7,8 @@ import bcrypt from 'bcrypt';
 import helmet from 'helmet';
 import methodOverride from 'method-override';
 import dotenv from 'dotenv';
+import { registry } from './utils/metrics.js';
+import { metricsMiddleware } from './utils/metricsMiddleware.js';
 
 // First import MySQLStore as a function
 import MySQLStoreFactory from 'express-mysql-session';
@@ -811,6 +813,15 @@ app.use((req, res) => {
     error: { status: 404 },
     status: 404
   });
+});
+
+// Apply metrics middleware to track all requests
+app.use(metricsMiddleware);
+
+// metrics endpoint
+app.get('/metrics', async (req, res) => {
+  res.set('Content-Type', registry.contentType);
+  res.end(await registry.metrics());
 });
 
 // --- Server Initialization ---
